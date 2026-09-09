@@ -2,7 +2,7 @@ import axios from "axios";
 import { ApiResponse } from "../models/common";
 import { ApiError } from "../models/error";
 import { LeaseCreateDTO, LeaseDetailsDTO } from "../models/lease";
-import { TenantInvitationCreateDTO, TenantInvitationDetailsDTO } from "../models/user";
+import { TenantDetailsDTO, TenantInvitationCreateDTO, TenantInvitationDetailsDTO } from "../models/user";
 
 const apiUrl = import.meta.env.VITE_RENT_MANAGER_API_URL;
 
@@ -59,9 +59,15 @@ export const tenantInvitationApi = {
     return handleResponse(res.data);
   },
 
-  acceptInvitation: async (token: string) => {
+  acceptInvitation: async (invitationToken:string, userId:number, jwtToken: string) => {
     const res = await apiClient.post<ApiResponse<TenantInvitationDetailsDTO>>(
-      `/tenant-invitations/accept/${token}`
+      `/tenant-invitations/${invitationToken}/accept?userId=${userId}`,
+      null,
+      {
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+        },
+      }
     );
     return handleResponse(res.data);
   },
@@ -98,6 +104,17 @@ export const leaseApi = {
     });
     return handleResponse(res.data);
   },
+};
+
+export const tenantApi = {
+    getByUserId: async (userId:number, jwtTokwn:string) => {
+        const res = await apiClient.get<ApiResponse<TenantDetailsDTO>>(`tenants/${userId}/user`,{
+            headers: {
+                Authorization: `Bear ${jwtTokwn}`,
+            }
+        });
+        return handleResponse(res.data);
+    }
 };
 
 export function handleResponse<T>(response: ApiResponse<T>): T {

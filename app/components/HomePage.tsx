@@ -1,8 +1,11 @@
-import React, { useEffect } from "react";
-import { Card, Typography, Button, notification } from "antd";
+import React, { useEffect, useState } from "react";
+import { Card, Typography, Button, notification, Result, Avatar, Tabs } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAccount } from "../store/account/AccountContext";
-import { AccountState } from "../models/user";
+import { AccountState, TenantInvitationDetailsDTO } from "../models/user";
+import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined } from "@ant-design/icons";
+import { LeaseDetailsDTO } from "../models/lease";
+
 
 const { Title, Text } = Typography;
 
@@ -15,6 +18,9 @@ export default function HomePage() {
     const accountStateString = searchParams.get("state");
     const [notificationApi, contextHolder] = notification.useNotification();
     const { accountState, dispatchAccountState } = useAccount();
+    const [leases,setLeases] = useState<LeaseDetailsDTO[]>([]);
+    const [invitations,setInvitations] = useState<TenantInvitationDetailsDTO[]>([]);
+    const [tenant, setTenant] = useState<LeaseDetailsDTO|null>(null);
 
 
     function isTokenExpired(token?: string): boolean 
@@ -96,10 +102,28 @@ export default function HomePage() {
 
   return (
     <Card style={{ maxWidth: 720, margin: "40px auto" }}>
-      <Title level={3}>Tenant portal</Title>
-      <Text>
-        Review your lease invitation or continue to the tenant summary screen.
-      </Text>
+      <Result
+            style={{color:"black"}}
+            icon={<Avatar size="large" icon={<UserOutlined />} />}
+            title={accountState.accountDetails?.userDetails.firstName}
+            subTitle={accountState.accountDetails?.userDetails.phoneNumber}
+            extra={<Tabs
+                    defaultActiveKey="1"
+                    centered
+                    items={[
+                            {
+                                key: '1',
+                                label: 'Leases',
+                                children: 'Content of Tab Pane 1',
+                            },
+                            {
+                                key: '2',
+                                label: 'Invitations',
+                                children: 'Content of Tab Pane 2',
+                            }
+                        ]}
+                />}
+       />
 
     </Card>
   );

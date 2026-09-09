@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Descriptions, notification, Result, Spin, Tag, Typography } from "antd";
 import { leaseApi, tenantInvitationApi } from "../api/api";
-import { TenantInvitationDetailsDTO } from "../models/user";
+import { AccountState, TenantInvitationDetailsDTO } from "../models/user";
 import { useAccount } from "../store/account/AccountContext";
 import { LeaseDetailsDTO } from "../models/lease";
 
@@ -22,6 +22,29 @@ export default function InvitationDetails() {
   const { accountState, dispatchAccountState } = useAccount();
   const jwtToken = accountState.accountDetails?.token;
   
+function isTokenExpired(token?: string): boolean 
+    {
+        if (!token) 
+        {
+            return true;
+        }
+
+        try {
+            const parts = token.split(".");
+            if (parts.length < 2) {return true;}
+
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+            const exp = payload?.exp;
+
+            if (typeof exp !== "number") {
+                return true;
+            }
+
+            return Date.now() >= exp * 1000;
+        } catch (error) {
+            return true;
+        }
+    }
 
   const navigateToAuthFromInvitation = (nextApp: string = "tenant-manager", phone?: string) => {
         if (!authUrl) {
@@ -85,10 +108,31 @@ export default function InvitationDetails() {
   };
 
   useEffect(() => {
+    const receivedAccountState: AccountState = accountState;
+    const details = receivedAccountState.accountDetails;
+    if (!details) {
+        console.error("Account state payload is missing accountDetails");
+        return;
+    }
+    if (isTokenExpired(details.token)) {
+        notificationApi.error({
+        message: "Session expired",
+        description: "Your sign-in session has expired. Please sign in again.",
+        });
+        dispatchAccountState({ type: "LOGOUT" });
+        navigateToAuthFromInvitation();
+        return;
+    }
+
     loadInvitation();
   }, [invitationToken]);
 
   const handleAcceptInvitation = async () => {
+    if (!jwtToken) {
+      navigateToAuthFromInvitation();
+      return;
+    }
+
     if (!invitationToken) {
       notificationApi.error({
         message: "Invitation missing",
@@ -97,18 +141,27 @@ export default function InvitationDetails() {
       return;
     }
 
+    const userId = accountState.accountDetails?.userDetails?.id;
+    if (!userId) {
+      notificationApi.error({
+        message: "User not found",
+        description: "Your account details are missing, so we cannot accept this invitation.",
+      });
+      return;
+    }
+
     setAccepting(true);
     try {
-      const accepted = await tenantInvitationApi.acceptInvitation(invitationToken);
+      await tenantInvitationApi.acceptInvitation(invitationToken, userId, jwtToken);
       notificationApi.success({
         message: "Invitation accepted",
         description: "Your lease details are now available.",
       });
-      navigate(`/accepted/${accepted.invitationToken || invitationToken}`);
+      navigate(`/`);
     } catch (error: any) {
       notificationApi.error({
-        message: "Failed to accept invitation",
-        description: error?.message ?? "The invitation could not be accepted.",
+        message: error?.message ?? "Failed to accept invitation",
+        description: error?.data ?? "The invitation could not be accepted.",
       });
     } finally {
       setAccepting(false);
