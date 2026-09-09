@@ -1,0 +1,109 @@
+import axios from "axios";
+import { ApiResponse } from "../models/common";
+import { ApiError } from "../models/error";
+import { LeaseCreateDTO, LeaseDetailsDTO } from "../models/lease";
+import { TenantInvitationCreateDTO, TenantInvitationDetailsDTO } from "../models/user";
+
+const apiUrl = import.meta.env.VITE_RENT_MANAGER_API_URL;
+
+export const apiClient = axios.create({
+  baseURL: `${apiUrl}/rent-manager/v1`,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      const { message, data, statusCode } = error.response.data;
+      return Promise.reject(
+        new ApiError({
+          message: message ?? "SERVER_ERROR",
+          data: data ?? null,
+          statusCode: statusCode ?? error.response.status,
+        })
+      );
+    }
+
+    if (error.request) {
+      return Promise.reject(
+        new ApiError({
+          message: "NETWORK_ERROR",
+          data: "No response from server",
+          statusCode: 0,
+        })
+      );
+    }
+
+    return Promise.reject(
+      new ApiError({
+        message: "CLIENT_ERROR",
+        data: "Unexpected error occurred",
+        statusCode: 0,
+      })
+    );
+  }
+);
+
+export const tenantInvitationApi = {
+  getByInvitationToken: async (invitationToken:string,jwtToken: string) => {
+    const res = await apiClient.get<ApiResponse<TenantInvitationDetailsDTO>>(`/tenant-invitations/${invitationToken}`,
+         {
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`
+        }
+      }
+    );
+    return handleResponse(res.data);
+  },
+
+  acceptInvitation: async (token: string) => {
+    const res = await apiClient.post<ApiResponse<TenantInvitationDetailsDTO>>(
+      `/tenant-invitations/accept/${token}`
+    );
+    return handleResponse(res.data);
+  },
+
+  getLeaseDetailsByInvitationToken: async (invitationToken:string, jwtToken:string) => {
+    const res = await apiClient.get<ApiResponse<LeaseDetailsDTO>>(`/tenant-invitations/${invitationToken}/lease`,
+        {
+            headers: {
+                'Authorization': `Bearer ${jwtToken}`
+            }
+        }
+    );
+
+    return handleResponse(res.data);
+
+  }
+};
+
+export const leaseApi = {
+  getLeaseById: async (id: number, token: string) => {
+    const res = await apiClient.get<ApiResponse<LeaseDetailsDTO>>(`/leases/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return handleResponse(res.data);
+  },
+
+  createLease: async (requestBody: LeaseCreateDTO, token: string) => {
+    const res = await apiClient.post<ApiResponse<LeaseDetailsDTO>>(`/leases`, requestBody, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return handleResponse(res.data);
+  },
+};
+
+export function handleResponse<T>(response: ApiResponse<T>): T {
+  if (!response.success) {
+    throw new Error(response.message ?? "Request failed");
+  }
+
+  return response.data;
+}

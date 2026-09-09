@@ -1,0 +1,172 @@
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Button, Card, Descriptions, notification, Result, Spin, Tag, Typography } from "antd";
+import { leaseApi, tenantInvitationApi } from "../api/api";
+import { TenantInvitationDetailsDTO } from "../models/user";
+import { useAccount } from "../store/account/AccountContext";
+import { LeaseDetailsDTO } from "../models/lease";
+
+const { Title, Text } = Typography;
+
+const authUrl = import.meta.env.VITE_AUTH_URL?.trim();
+const tenantManagerUrl = import.meta.env.VITE_TENANT_MANAGER_URL?.trim();
+
+export default function InvitationDetails() {
+  const { invitationToken } = useParams();
+  const navigate = useNavigate();
+  const [invitation, setInvitation] = useState<TenantInvitationDetailsDTO | null>(null);
+  const [lease,setLease] = useState<LeaseDetailsDTO | null> (null);
+  const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState(false);
+  const [notificationApi, contextHolder] = notification.useNotification();
+  const { accountState, dispatchAccountState } = useAccount();
+  const jwtToken = accountState.accountDetails?.token;
+  
+
+  const navigateToAuthFromInvitation = (nextApp: string = "tenant-manager", phone?: string) => {
+        if (!authUrl) {
+            notificationApi.error({
+            message: "Error while reading url",
+            description: "VITE_AUTH_URL is not configured.",
+            });
+            return;
+        }
+
+        const outGoingUrlValue = nextApp === "tenant-manager" ? `tenantManagerUrl/invitation/${invitationToken}`: null;
+        if (!outGoingUrlValue) {
+            console.error("Unable to resolve outgoing URL for auth redirect.");
+            return;
+        }
+
+        const url = `${authUrl}?outGoingUrl=${encodeURIComponent(outGoingUrlValue)}&phoneNumber=${encodeURIComponent("")}`;
+        window.location.href = url;
+  };
+
+
+
+  const loadInvitation = async () => {
+
+    if (!invitationToken) {
+      notificationApi.error({
+        message: "Invitation missing",
+        description: "The tenant invitation token was not provided.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if(!jwtToken)
+    {
+      navigateToAuthFromInvitation();
+      return;
+    }
+
+    
+
+
+
+    try {
+      const data = await tenantInvitationApi.getByInvitationToken(invitationToken,jwtToken);
+      setInvitation(data);
+
+      if(data.leaseId)
+      {
+        const res = await leaseApi.getLeaseById(data.leaseId,jwtToken);
+        setLease(res);
+      }
+    } catch (error: any) {
+      notificationApi.error({
+        message: error.message ?? "Unable to load invitation",
+        description: error.data ?? "The invitation could not be loaded.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInvitation();
+  }, [invitationToken]);
+
+  const handleAcceptInvitation = async () => {
+    if (!invitationToken) {
+      notificationApi.error({
+        message: "Invitation missing",
+        description: "No invitation token was found to accept.",
+      });
+      return;
+    }
+
+    setAccepting(true);
+    try {
+      const accepted = await tenantInvitationApi.acceptInvitation(invitationToken);
+      notificationApi.success({
+        message: "Invitation accepted",
+        description: "Your lease details are now available.",
+      });
+      navigate(`/accepted/${accepted.invitationToken || invitationToken}`);
+    } catch (error: any) {
+      notificationApi.error({
+        message: "Failed to accept invitation",
+        description: error?.message ?? "The invitation could not be accepted.",
+      });
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        {contextHolder}
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (!invitation) {
+    return (
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
+        {contextHolder}
+         <Result
+            status="warning"
+            title="Invitation not found or expired"
+            extra={
+              <Button type="primary" key="console">
+                Go Home
+              </Button>
+            }
+          />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f8fafc", padding: 24, display: "grid", placeItems: "center" }}>
+      {contextHolder}
+      <Card 
+        title="Lease Terms"
+        style={{ maxWidth: 760, width: "100%" }}
+        >
+        <Descriptions column={1} bordered style={{ marginTop: 20 }}>
+          <Descriptions.Item label="Start Date">{lease?.startDate}</Descriptions.Item>
+          <Descriptions.Item label="End Date">{lease?.endDate}</Descriptions.Item>
+          <Descriptions.Item label="Rental Amount">{lease?.rentAmount} {lease?.currency}</Descriptions.Item>
+          <Descriptions.Item label="Rental Period">{lease?.rentPeriod}</Descriptions.Item>
+          <Descriptions.Item label="Total Amount">{lease?.paymentAmount}</Descriptions.Item>
+          <Descriptions.Item label="Amount Paid">{lease?.amountPaid}</Descriptions.Item>
+          <Descriptions.Item label="Ballance">{lease?.balance}</Descriptions.Item>
+          <Descriptions.Item label="Status">
+            <Tag color={invitation.status === "PENDING" ? "gold" : "green"}>{invitation.status}</Tag>
+          </Descriptions.Item>
+        </Descriptions>
+
+        <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>
+          <Button type="primary" size="large" loading={accepting} onClick={handleAcceptInvitation}>
+            Accept invitation
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
