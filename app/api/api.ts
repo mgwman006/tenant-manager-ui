@@ -48,13 +48,23 @@ apiClient.interceptors.response.use(
 );
 
 export const tenantInvitationApi = {
+    getActiveInvitationsByPhoneNumber: async (phoneNumber :string, jwtToken: string) => {
+        const results = await apiClient.get<ApiResponse<TenantInvitationDetailsDTO[]>>(`/tenant-invitations/phone/${phoneNumber}`,
+            {
+                headers: {
+                'Authorization': `Bearer ${jwtToken}`
+                }
+            }
+        );
+    },
+    
   getByInvitationToken: async (invitationToken:string,jwtToken: string) => {
     const res = await apiClient.get<ApiResponse<TenantInvitationDetailsDTO>>(`/tenant-invitations/${invitationToken}`,
-         {
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`
+        {
+            headers: {
+            'Authorization': `Bearer ${jwtToken}`
+            }
         }
-      }
     );
     return handleResponse(res.data);
   },
@@ -87,6 +97,15 @@ export const tenantInvitationApi = {
 };
 
 export const leaseApi = {
+    getActiveLeasesByTenantId: async (tenantId : number, token :string) => {
+        const result = await apiClient.get<ApiResponse<LeaseDetailsDTO[]>>(`/leases/${tenantId}`,{
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        })
+        return handleResponse(result.data);
+    },
+
   getLeaseById: async (id: number, token: string) => {
     const res = await apiClient.get<ApiResponse<LeaseDetailsDTO>>(`/leases/${id}`, {
       headers: {
@@ -108,7 +127,7 @@ export const leaseApi = {
 
 export const tenantApi = {
     getByUserId: async (userId:number, jwtTokwn:string) => {
-        const res = await apiClient.get<ApiResponse<TenantDetailsDTO>>(`tenants/${userId}/user`,{
+        const res = await apiClient.get<ApiResponse<TenantDetailsDTO>>(`tenants?userId=${userId}`,{
             headers: {
                 Authorization: `Bear ${jwtTokwn}`,
             }
