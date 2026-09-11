@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Card, Typography, Button, notification, Result, Avatar, Tabs } from "antd";
+import { Card, Typography, Button, notification, Result, Avatar, Tabs, Spin, Row, Col } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAccount } from "../store/account/AccountContext";
-import { AccountState, TenantInvitationDetailsDTO } from "../models/user";
+import { AccountState, TenantDetailsDTO, TenantInvitationDetailsDTO } from "../models/user";
 import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined } from "@ant-design/icons";
 import { LeaseDetailsDTO } from "../models/lease";
+import { tenantApi } from "../api/api";
+import Leases from "./lease/Leases";
+import Invitations from "./invitation/Invitations";
 
 
 const { Title, Text } = Typography;
@@ -20,7 +23,7 @@ export default function HomePage() {
     const { accountState, dispatchAccountState } = useAccount();
     const [leases,setLeases] = useState<LeaseDetailsDTO[]>([]);
     const [invitations,setInvitations] = useState<TenantInvitationDetailsDTO[]>([]);
-    const [tenant, setTenant] = useState<LeaseDetailsDTO|null>(null);
+    const [tenant, setTenant] = useState<TenantDetailsDTO|null>(null);
 
 
     function isTokenExpired(token?: string): boolean 
@@ -66,6 +69,12 @@ export default function HomePage() {
         window.location.href = url;
     };
 
+    const loadTenant = async (userId:number, jwtToken:string) =>
+    {
+        const tenantResponse = await tenantApi.getByUserId(userId,jwtToken);
+        setTenant(tenantResponse);
+    }
+
     useEffect(() => {
         if (!accountStateString) {
             navigateToAuth();
@@ -76,7 +85,7 @@ export default function HomePage() {
             const receivedAccountState: AccountState = JSON.parse(accountStateString);
             const details = receivedAccountState.accountDetails;
             if (!details) {
-                console.error("Account state payload is missing accountDetails");
+                navigateToAuth();
                 return;
             }
 
@@ -94,37 +103,49 @@ export default function HomePage() {
                 dispatchAccountState({ type: "FETCH_SUCCESS", payload: details });
             }
 
+            loadTenant(details.userDetails.id,details.token);
+             
         
         } catch (error) {
             console.error("Failed to parse account state from URL", error);
         }
     }, []);
 
+    if(!tenant)
+    {
+        <Spin />;
+        return;
+    }
+
   return (
-    <Card style={{ maxWidth: 720, margin: "40px auto" }}>
-      <Result
-            style={{color:"black"}}
-            icon={<Avatar size="large" icon={<UserOutlined />} />}
-            title={accountState.accountDetails?.userDetails.firstName}
-            subTitle={accountState.accountDetails?.userDetails.phoneNumber}
-            extra={<Tabs
+        <Row justify={"center"} align="middle">
+            <Col xs ={24} sm={24} md={16} lg={16} style={{alignItems:"center"}} >
+                <Result
+                    icon={<UserOutlined />}
+                    title={tenant.firstName+" "+tenant.lastName}
+                    extra={tenant.phoneNumber}
+                />
+            </Col>
+            <Col xs ={24} sm={24} md={16} lg={16}>
+                <Tabs
                     defaultActiveKey="1"
                     centered
                     items={[
-                            {
-                                key: '1',
-                                label: 'Leases',
-                                children: 'Content of Tab Pane 1',
-                            },
-                            {
-                                key: '2',
-                                label: 'Invitations',
-                                children: 'Content of Tab Pane 2',
-                            }
-                        ]}
-                />}
-       />
+                        {
+                            key: '1',
+                            label: 'Leases',
+                            children: <Leases tenantId={tenant.id} jwtToken={accountState.accountDetails?.token} />,
+                        },
+                        {
+                            key: '2',
+                            label: 'Invitations',
+                            children: <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />,
+                        }
+                    ]}
+                />
+            </Col>
+        </Row>
+      
 
-    </Card>
   );
 }

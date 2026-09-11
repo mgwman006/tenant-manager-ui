@@ -56,8 +56,9 @@ export const tenantInvitationApi = {
                 }
             }
         );
+        return handleResponse(results.data);
     },
-    
+
   getByInvitationToken: async (invitationToken:string,jwtToken: string) => {
     const res = await apiClient.get<ApiResponse<TenantInvitationDetailsDTO>>(`/tenant-invitations/${invitationToken}`,
         {
@@ -98,7 +99,7 @@ export const tenantInvitationApi = {
 
 export const leaseApi = {
     getActiveLeasesByTenantId: async (tenantId : number, token :string) => {
-        const result = await apiClient.get<ApiResponse<LeaseDetailsDTO[]>>(`/leases/${tenantId}`,{
+        const result = await apiClient.get<ApiResponse<LeaseDetailsDTO[]>>(`/leases/tenant/${tenantId}`,{
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -129,7 +130,7 @@ export const tenantApi = {
     getByUserId: async (userId:number, jwtTokwn:string) => {
         const res = await apiClient.get<ApiResponse<TenantDetailsDTO>>(`tenants?userId=${userId}`,{
             headers: {
-                Authorization: `Bear ${jwtTokwn}`,
+                Authorization: `Bearer ${jwtTokwn}`,
             }
         });
         return handleResponse(res.data);

@@ -1,7 +1,7 @@
 import Home from "./components/Home";
 import HomePage from "./components/HomePage";
 import InvitationDetails from "./components/InvitationDetails";
-import LeaseDetails from "./components/LeaseDetails";
+import LeaseDetails from "./components/lease/LeaseDetails";
 
 const routes = [
   {
