@@ -111,10 +111,8 @@ export default function HomePage() {
         }
     }, []);
 
-    if(!tenant)
-    {
-        <Spin />;
-        return;
+    if (!tenant) {
+        return <Spin />;
     }
 
   return (
