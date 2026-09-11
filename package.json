@@ -8,7 +8,7 @@
     "preview": "vite preview --host --port 4176"
   },
   "dependencies": {
-    "antd": "^5.25.3",
+    "antd": "^6.6.0",
     "axios": "^1.9.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
