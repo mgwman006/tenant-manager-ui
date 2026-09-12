@@ -10,18 +10,28 @@ const { Meta } = Card;
 export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtToken: string | undefined }) {
     const navigate = useNavigate();
     const [leases, setLeases] = useState<LeaseDetailsDTO[]>([]);
+    const [loading, setLoading] = useState(false);
 
     const loadLeases = async () => {
-        const res = await leaseApi.getActiveLeasesByTenantId(tenantId, jwtToken ?? "");
-        setLeases(res);
+        setLoading(true);
+        try {
+            const res = await leaseApi.getActiveLeasesByTenantId(tenantId, jwtToken ?? "");
+            setLeases(res);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         void loadLeases();
     }, [tenantId, jwtToken]);
 
-    if (leases.length <= 0) {
-        return <Spin />;
+    if (loading) {
+        return (
+            <div style={{ minHeight: "120px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Spin size="large" tip="Loading leases..." />
+            </div>
+        );
     }
 
     return (
