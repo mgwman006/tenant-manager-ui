@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
-import { List, Spin } from "antd";
+import { Avatar, Card, Listy, Spin, Tag } from "antd";
+import { MailOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router";
 import { tenantInvitationApi } from "../../api/api";
 import { TenantInvitationDetailsDTO } from "../../models/user";
+
+const { Meta } = Card;
 
 export default function Invitations({
   phoneNumber,
@@ -10,6 +14,7 @@ export default function Invitations({
   phoneNumber: string;
   jwtToken: string | undefined;
 }) {
+  const navigate = useNavigate();
   const [invitations, setInvitations] = useState<TenantInvitationDetailsDTO[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -40,18 +45,44 @@ export default function Invitations({
   }
 
   return (
-    <List
-      loading={loading}
-      dataSource={invitations}
-      locale={{ emptyText: "No invitations found" }}
-      renderItem={(item: TenantInvitationDetailsDTO) => (
-        <List.Item>
-          <div>
-            <strong>{item.phoneNumber}</strong>
-            <div>{item.status}</div>
-          </div>
-        </List.Item>
-      )}
-    />
+    <div>
+      <Listy<TenantInvitationDetailsDTO>
+        items={invitations}
+        rowKey="id"
+        itemRender={(item) => (
+          <Card
+            onClick={() => navigate(`/invitations/${item.invitationToken}`)}
+            style={{ cursor: "pointer" }}
+          >
+            <Meta
+              avatar={
+                <Avatar
+                  size={52}
+                  style={{ backgroundColor: "#fff1f0", color: "#cf1322" }}
+                >
+                  <MailOutlined style={{ fontSize: 28 }} />
+                </Avatar>
+              }
+              title={
+                item.status === "ACCEPTED" ? (
+                  <Tag color="success">Accepted</Tag>
+                ) : item.status === "PENDING" ? (
+                  <Tag color="warning">Pending</Tag>
+                ) : (
+                  <Tag color="error">{item.status}</Tag>
+                )
+              }
+              description={
+                <div>
+                  <div>{item.phoneNumber}</div>
+                  <div>Sent: {item.sentAt ?? "-"}</div>
+                  <div>Expires: {item.expiresAt ?? "-"}</div>
+                </div>
+              }
+            />
+          </Card>
+        )}
+      />
+    </div>
   );
 }
