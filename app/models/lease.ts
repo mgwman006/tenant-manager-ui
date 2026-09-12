@@ -8,11 +8,10 @@ export enum PaymentPeriod {
   YEARLY = "YEARLY",
 }
 
-export enum RentPeriod {
+export enum RentFrequency {
   DAILY = "DAILY",
   WEEKLY = "WEEKLY",
   MONTHLY = "MONTHLY",
-  SIX_MONTHS = "SIX_MONTHS",
   YEARLY = "YEARLY",
 }
 
@@ -23,34 +22,19 @@ export enum LeaseStatus {
   PENDING = "PENDING",
 }
 
- export interface LeaseDetailsDTO {
+export interface LeaseDetailsDTO {
   referenceNumber: string;
   id: number;
   startDate: string; // ISO date
   endDate: string; // ISO date
   rentAmount: number;
   currency: string;
-  rentPeriod?: RentPeriod;
-  paymentPeriod?: PaymentPeriod;
-  paymentAmount?: number;
-  amountPaid?: number;
-  balance?: number;
+  rentFrequency:RentFrequency;
+  fullLeasePaymentRequired:boolean;
+  totalAmount:number;
+  amountPaid:number;
+  balance:number;
   status: LeaseStatus;
   tenant?: TenantDetailsDTO;
   tenantInvitations?: TenantInvitationDetailsDTO[];
-}
-
-export interface LeaseCreateDTO {
-  rentalProfileId: number;
-  unitId: number;
-  tenantId?: number;
-  tenantFirstName?: string;
-  tenantLastName?: string;
-  tenantPhoneNumber?: string;
-  startDate?: string;
-  endDate?: string;
-  rentAmount: number;
-  currency: string;
-  rentPeriod?: RentPeriod;
-  paymentPeriod?: PaymentPeriod;
 }

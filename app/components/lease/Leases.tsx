@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, Listy, Spin, Avatar, Tag } from "antd";
+import { Card, Listy, Spin, Avatar, Tag, Empty } from "antd";
 import { ProfileOutlined } from "@ant-design/icons";
 import { LeaseDetailsDTO } from "../../models/lease";
 import { leaseApi } from "../../api/api";
@@ -36,39 +36,45 @@ export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtTo
 
     return (
         <div>
-            <Listy<LeaseDetailsDTO>
-                items={leases}
-                rowKey="id"
-                itemRender={(item) => (
-                    <Card
-                        onClick={() => navigate(`/leases/${item.id}`)}
-                        style={{ cursor: "pointer" }}
-                    >
-                        <Meta
-                            avatar={
-                                <Avatar 
-                                    size={52} 
-                                    style={{ backgroundColor: "#e6f4ff", color: "#1677ff" }}>
-                                    <ProfileOutlined style={{ fontSize: 28 }} />
-                                </Avatar>
-                            }
-                            title={
-                                item.amountPaid === item.paymentAmount ? (
-                                    <Tag color="success">Paid</Tag>
-                                ) : (
-                                    <Tag color="error">Unpaid</Tag>
-                                )
-                            }
-                            description={
-                                <div>
-                                    <div>Start Date: {item.startDate}</div>
-                                    <div>End Date: {item.endDate}</div>
-                                </div>
-                            }
-                        />
-                    </Card>
-                )}
-            />
+            {leases.length === 0 ? (
+                <div style={{ padding: "24px 0", textAlign: "center", color: "#666" }}>
+                    <Empty description="No active leases found."/>
+                </div>
+            ) : (
+                <Listy<LeaseDetailsDTO>
+                    items={leases}
+                    rowKey="id"
+                    itemRender={(item) => (
+                        <Card
+                            onClick={() => navigate(`/leases/${item.id}`)}
+                            style={{ cursor: "pointer" }}
+                        >
+                            <Meta
+                                avatar={
+                                    <Avatar 
+                                        size={52} 
+                                        style={{ backgroundColor: "#e6f4ff", color: "#1677ff" }}>
+                                        <ProfileOutlined style={{ fontSize: 28 }} />
+                                    </Avatar>
+                                }
+                                title={
+                                    item.amountPaid === item.totalAmount ? (
+                                        <Tag color="success">Paid</Tag>
+                                    ) : (
+                                        <Tag color="error">Unpaid</Tag>
+                                    )
+                                }
+                                description={
+                                    <div>
+                                        <div>Start Date: {item.startDate}</div>
+                                        <div>End Date: {item.endDate}</div>
+                                    </div>
+                                }
+                            />
+                        </Card>
+                    )}
+                />
+            )}
         </div>
     );
 }

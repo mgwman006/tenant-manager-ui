@@ -96,13 +96,13 @@ export default function LeaseDetails() {
   }
 
   const currency = lease.currency || "TSh";
-  const totalObligation = Number(lease.paymentAmount ?? lease.rentAmount ?? 0);
+  const totalObligation = Number(lease.totalAmount ?? lease.rentAmount ?? 0);
   const amountPaid = Number(lease.amountPaid ?? 0);
   const remaining = Math.max(totalObligation - amountPaid, 0);
   const fullyPaid = remaining <= 0;
   const progressPercent = totalObligation > 0 ? Math.min((amountPaid / totalObligation) * 100, 100) : 0;
-  const recommendedMonthly = Math.max(Number(lease.rentAmount ?? lease.paymentAmount ?? 0), 0);
-  const rentPerid = lease.rentPeriod ?? "Month";
+  const recommendedMonthly = Math.max(Number(lease.rentAmount ?? lease.totalAmount ?? 0), 0);
+  const rentPerid = lease.rentFrequency ?? "Month";
 
   const dueDate = lease.endDate ? new Date(lease.endDate) : null;
   const dueLabel = dueDate && !Number.isNaN(dueDate.getTime())
