@@ -1,6 +1,6 @@
 import Home from "./components/Home";
 import HomePage from "./components/HomePage";
-import InvitationDetails from "./components/InvitationDetails";
+import InvitationDetails from "./components/invitation/InvitationDetails";
 import LeaseDetails from "./components/lease/LeaseDetails";
 
 const routes = [
@@ -13,11 +13,11 @@ const routes = [
         Component: HomePage,
       },
       {
-        path: "lease/:leaseId",
+        path: "leases/:leaseId",
         Component: LeaseDetails,
       },
       {
-        path: "invitation/:invitationToken",
+        path: "invitations/:invitationToken",
         Component: InvitationDetails,
       }
     ],

@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { leaseApi } from "../../api/api";
-import { Card, Listy, Spin, Avatar } from "antd";
-import { SettingOutlined, EditOutlined, EllipsisOutlined, DockerOutlined, UserAddOutlined, ProfileOutlined } from "@ant-design/icons";
+import { Card, Listy, Spin, Avatar, Tag } from "antd";
+import { ProfileOutlined } from "@ant-design/icons";
 import { LeaseDetailsDTO } from "../../models/lease";
+import { leaseApi } from "../../api/api";
+import { useNavigate } from "react-router";
+
 const { Meta } = Card;
 
 export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtToken: string | undefined }) {
+    const navigate = useNavigate();
     const [leases, setLeases] = useState<LeaseDetailsDTO[]>([]);
 
     const loadLeases = async () => {
@@ -26,15 +29,35 @@ export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtTo
             <Listy<LeaseDetailsDTO>
                 items={leases}
                 rowKey="id"
-                itemRender={(item) => 
-                    <Card >
+                itemRender={(item) => (
+                    <Card
+                        onClick={() => navigate(`/leases/${item.id}`)}
+                        style={{ cursor: "pointer" }}
+                    >
                         <Meta
-                            avatar={<ProfileOutlined />}
-                            title={item.status}
-                            description={`${item.startDate} -> ${item.endDate}`}
-                       />
-                   </Card> 
-                }
+                            avatar={
+                                <Avatar 
+                                    size={52} 
+                                    style={{ backgroundColor: "#e6f4ff", color: "#1677ff" }}>
+                                    <ProfileOutlined style={{ fontSize: 28 }} />
+                                </Avatar>
+                            }
+                            title={
+                                item.amountPaid === item.paymentAmount ? (
+                                    <Tag color="success">Paid</Tag>
+                                ) : (
+                                    <Tag color="error">Unpaid</Tag>
+                                )
+                            }
+                            description={
+                                <div>
+                                    <div>Start Date: {item.startDate}</div>
+                                    <div>End Date: {item.endDate}</div>
+                                </div>
+                            }
+                        />
+                    </Card>
+                )}
             />
         </div>
     );

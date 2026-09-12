@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Descriptions, notification, Result, Spin, Tag, Typography } from "antd";
-import { leaseApi, tenantInvitationApi } from "../api/api";
-import { AccountState, TenantInvitationDetailsDTO } from "../models/user";
-import { useAccount } from "../store/account/AccountContext";
-import { LeaseDetailsDTO } from "../models/lease";
+import { leaseApi, tenantInvitationApi } from "../../api/api";
+import { AccountState, TenantInvitationDetailsDTO } from "../../models/user";
+import { useAccount } from "../../store/account/AccountContext";
+import { LeaseDetailsDTO } from "../../models/lease";
 
 const { Title, Text } = Typography;
 
