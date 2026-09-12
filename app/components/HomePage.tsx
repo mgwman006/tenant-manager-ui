@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Card, Typography, Button, notification, Result, Avatar, Tabs, Spin, Row, Col } from "antd";
+import { Card, Typography, Button, notification, Result, Avatar, Tabs, Spin, Row, Col, Alert } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAccount } from "../store/account/AccountContext";
 import { AccountState, TenantDetailsDTO, TenantInvitationDetailsDTO } from "../models/user";
@@ -16,14 +16,12 @@ const authUrl = import.meta.env.VITE_AUTH_URL?.trim();
 const tenantManagerUrl = import.meta.env.VITE_TENANT_MANAGER_URL?.trim();
 
 export default function HomePage() {
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const accountStateString = searchParams.get("state");
+    let accountStateString = searchParams.get("state");
     const [notificationApi, contextHolder] = notification.useNotification();
     const { accountState, dispatchAccountState } = useAccount();
-    const [leases,setLeases] = useState<LeaseDetailsDTO[]>([]);
-    const [invitations,setInvitations] = useState<TenantInvitationDetailsDTO[]>([]);
     const [tenant, setTenant] = useState<TenantDetailsDTO|null>(null);
+    const [loading, setLoading] = useState(false);
 
 
     function isTokenExpired(token?: string): boolean 
@@ -71,11 +69,20 @@ export default function HomePage() {
 
     const loadTenant = async (userId:number, jwtToken:string) =>
     {
-        const tenantResponse = await tenantApi.getByUserId(userId,jwtToken);
-        setTenant(tenantResponse);
+        setLoading(true);
+        try {
+            const tenantResponse = await tenantApi.getByUserId(userId,jwtToken);
+            setTenant(tenantResponse);
+        } finally {
+            setLoading(false);
+        }
     }
 
     useEffect(() => {
+        if(!accountStateString){
+            accountStateString = JSON.stringify(accountState);
+        }
+
         if (!accountStateString) {
             navigateToAuth();
             return;
@@ -111,39 +118,55 @@ export default function HomePage() {
         }
     }, []);
 
-    if (!tenant) {
-        return <Spin />;
+    if (loading) {
+        return (
+            <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Spin size="large" tip="Loading your account..." />
+            </div>
+        );
+    }
+
+    if(!tenant){
+        return (
+            <Alert
+                title="Error"
+                description="tenant is not defined"
+                type="error"
+                showIcon
+            />
+        );
     }
 
   return (
-        <Row justify={"center"} align="middle">
-            <Col xs ={24} sm={24} md={16} lg={16} style={{alignItems:"center"}} >
-                <Result
-                    icon={<UserOutlined />}
-                    title={tenant.firstName+" "+tenant.lastName}
-                    extra={tenant.phoneNumber}
-                />
-            </Col>
-            <Col xs ={24} sm={24} md={16} lg={16}>
-                <Tabs
-                    defaultActiveKey="1"
-                    centered
-                    items={[
-                        {
-                            key: '1',
-                            label: 'Leases',
-                            children: <Leases tenantId={tenant.id} jwtToken={accountState.accountDetails?.token} />,
-                        },
-                        {
-                            key: '2',
-                            label: 'Invitations',
-                            children: <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />,
-                        }
-                    ]}
-                />
-            </Col>
-        </Row>
-      
-
+        <>
+            {contextHolder}
+            <Row justify={"center"} align="middle">
+                <Col xs ={24} sm={24} md={16} lg={16} style={{alignItems:"center"}} >
+                    <Result
+                        icon={<UserOutlined />}
+                        title={tenant.firstName+" "+tenant.lastName}
+                        extra={tenant.phoneNumber}
+                    />
+                </Col>
+                <Col xs ={24} sm={24} md={16} lg={16}>
+                    <Tabs
+                        defaultActiveKey="1"
+                        centered
+                        items={[
+                            {
+                                key: '1',
+                                label: 'Leases',
+                                children: <Leases tenantId={tenant.id} jwtToken={accountState.accountDetails?.token} />,
+                            },
+                            {
+                                key: '2',
+                                label: 'Invitations',
+                                children: <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />,
+                            }
+                        ]}
+                    />
+                </Col>
+            </Row>
+        </>
   );
 }
