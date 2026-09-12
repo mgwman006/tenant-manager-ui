@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Alert, Button, Card, Descriptions, notification, Spin, Typography } from "antd";
+import { Button, Card, notification, Progress, Spin, Typography } from "antd";
 import { leaseApi } from "../../api/api";
 import { LeaseDetailsDTO } from "../../models/lease";
 import { useAccount } from "../../store/account/AccountContext";
@@ -9,33 +9,31 @@ const { Title, Text } = Typography;
 const authUrl = import.meta.env.VITE_AUTH_URL?.trim();
 const tenantManagerUrl = import.meta.env.VITE_TENANT_MANAGER_URL?.trim();
 
-
 export default function LeaseDetails() {
   const { leaseId } = useParams();
   const navigate = useNavigate();
   const [lease, setLease] = useState<LeaseDetailsDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificationApi, contextHolder] = notification.useNotification();
-  const { accountState, dispatchAccountState } = useAccount();
-  
+  const { accountState } = useAccount();
 
-  const navigateToAuthFromLeaseDeatils = (nextApp: string = "tenant-manager", phone?: string) => {
-        if (!authUrl) {
-            notificationApi.error({
-            message: "Error while reading url",
-            description: "VITE_AUTH_URL is not configured.",
-            });
-            return;
-        }
+  const navigateToAuthFromLeaseDeatils = (nextApp: string = "tenant-manager") => {
+    if (!authUrl) {
+      notificationApi.error({
+        message: "Error while reading url",
+        description: "VITE_AUTH_URL is not configured.",
+      });
+      return;
+    }
 
-        const outGoingUrlValue = nextApp === "tenant-manager" ? `${tenantManagerUrl}/leases/${leaseId}`: null;
-        if (!outGoingUrlValue) {
-            console.error("Unable to resolve outgoing URL for auth redirect.");
-            return;
-        }
+    const outGoingUrlValue = nextApp === "tenant-manager" ? `${tenantManagerUrl}/leases/${leaseId}` : null;
+    if (!outGoingUrlValue) {
+      console.error("Unable to resolve outgoing URL for auth redirect.");
+      return;
+    }
 
-        const url = `${authUrl}?outGoingUrl=${encodeURIComponent(outGoingUrlValue)}&phoneNumber=${encodeURIComponent("")}`;
-        window.location.href = url;
+    const url = `${authUrl}?outGoingUrl=${encodeURIComponent(outGoingUrlValue)}&phoneNumber=${encodeURIComponent("")}`;
+    window.location.href = url;
   };
 
   useEffect(() => {
@@ -73,8 +71,8 @@ export default function LeaseDetails() {
       }
     };
 
-    loadAcceptedLease();
-  }, [leaseId]);
+    void loadAcceptedLease();
+  }, [leaseId, accountState.accountDetails?.token, notificationApi]);
 
   if (loading) {
     return (
@@ -97,33 +95,76 @@ export default function LeaseDetails() {
     );
   }
 
+  const currency = lease.currency || "TSh";
+  const totalObligation = Number(lease.paymentAmount ?? lease.rentAmount ?? 0);
+  const amountPaid = Number(lease.amountPaid ?? 0);
+  const remaining = Math.max(totalObligation - amountPaid, 0);
+  const fullyPaid = remaining <= 0;
+  const progressPercent = totalObligation > 0 ? Math.min((amountPaid / totalObligation) * 100, 100) : 0;
+  const recommendedMonthly = Math.max(Number(lease.rentAmount ?? lease.paymentAmount ?? 0), 0);
+  const rentPerid = lease.rentPeriod ?? "Month";
+
+  const dueDate = lease.endDate ? new Date(lease.endDate) : null;
+  const dueLabel = dueDate && !Number.isNaN(dueDate.getTime())
+    ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" }).format(dueDate)
+    : "—";
+
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", padding: 24 }}>
       {contextHolder}
-      <Card style={{ maxWidth: 860, margin: "0 auto" }}>
-        <Title level={2}>Lease overview</Title>
-        <Alert
-          type="success"
-          showIcon
-          message="Invitation accepted successfully"
-          description="Your lease has been activated and detailed records are shown below."
-          style={{ marginBottom: 20 }}
-        />
+      <Card style={{ maxWidth: 760, margin: "0 auto", borderRadius: 16, boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)" }}>
+        <Title level={2} style={{ marginBottom: 24 }}>Your Rent</Title>
 
-        <Descriptions bordered column={2}>
-          <Descriptions.Item label="Reference">{lease.referenceNumber}</Descriptions.Item>
-          <Descriptions.Item label="Status">{lease.status}</Descriptions.Item>
-          <Descriptions.Item label="Start date">{new Date(lease.startDate).toLocaleDateString()}</Descriptions.Item>
-          <Descriptions.Item label="End date">{new Date(lease.endDate).toLocaleDateString()}</Descriptions.Item>
-          <Descriptions.Item label="Rent amount">{lease.currency} {lease.rentAmount.toLocaleString()}</Descriptions.Item>
-          <Descriptions.Item label="Amount paid">{lease.currency} {Number(lease.amountPaid ?? 0).toLocaleString()}</Descriptions.Item>
-          <Descriptions.Item label="Outstanding balance">{lease.currency} {Number(lease.balance ?? 0).toLocaleString()}</Descriptions.Item>
-          <Descriptions.Item label="Tenant">{lease.tenant ? `${lease.tenant.firstName} ${lease.tenant.lastName}` : "N/A"}</Descriptions.Item>
-        </Descriptions>
+        <div style={{ display: "grid", gap: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <Text type="secondary">Total obligation:</Text>
+            <Text strong style={{ fontSize: 18 }}>{currency} {totalObligation.toLocaleString()}</Text>
+          </div>
 
-        {/* <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end", gap: 12 }}>
-          <Button onClick={() => navigate("/invitation" + (invitationToken ? `/${invitationToken}` : ""))}>Back to summary</Button>
-        </div> */}
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <Text type="secondary">Due:</Text>
+            <Text strong>{dueLabel}</Text>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <Text type="secondary">Paid:</Text>
+            <Text strong>{currency} {amountPaid.toLocaleString()}</Text>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <Text type="secondary">Remaining:</Text>
+            <Text strong style={{ color: fullyPaid ? "#389e0d" : "#d4380d" }}>
+              {currency} {remaining.toLocaleString()}
+            </Text>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <Text type="secondary">Recommended:</Text>
+            <Text strong>{currency} {recommendedMonthly.toLocaleString()}/{rentPerid}</Text>
+          </div>
+
+          <div style={{ marginTop: 8 }}>
+            <Progress
+              percent={Math.round(progressPercent)}
+              showInfo
+              strokeColor={fullyPaid ? "#52c41a" : "#1677ff"}
+              trailColor="#e6f4ff"
+              format={(percent) => `${percent}%`}
+            />
+          </div>
+        </div>
+
+        {!fullyPaid && (
+          <Button
+            type="primary"
+            size="large"
+            block
+            style={{ marginTop: 24, height: 46, fontWeight: 600 }}
+            // onClick={() => navigate(`/lease/${lease.id}`)}
+          >
+            Pay Rent
+          </Button>
+        )}
       </Card>
     </div>
   );
