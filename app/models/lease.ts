@@ -38,3 +38,18 @@ export interface LeaseDetailsDTO {
   tenant?: TenantDetailsDTO;
   tenantInvitations?: TenantInvitationDetailsDTO[];
 }
+
+export interface LeaseCreateDTO {
+  rentalProfileId: number;
+  unitId: number;
+  tenantId?: number;
+  landlordFirstName?: string;
+  tenantLastName?: string;
+  tenantPhoneNumber?: string;
+  startDate?: string;
+  endDate?: string;
+  rentAmount: number;
+  currency: string;
+  rentFrequency?: RentFrequency;
+  fullLeasePaymentRequired: boolean;
+}

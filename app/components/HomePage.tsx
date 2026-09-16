@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Card, Typography, Button, notification, Result, Avatar, Tabs, Spin, Row, Col, Alert } from "antd";
+import { Card, Typography, Button, notification, Result, Avatar, Tabs, Spin, Row, Col, Alert, Flex } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAccount } from "../store/account/AccountContext";
 import { AccountState, TenantDetailsDTO, TenantInvitationDetailsDTO } from "../models/user";
-import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined } from "@ant-design/icons";
+import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined } from "@ant-design/icons";
 import { LeaseDetailsDTO } from "../models/lease";
 import { tenantApi } from "../api/api";
 import Leases from "./lease/Leases";
 import Invitations from "./invitation/Invitations";
+
+const {Meta} = Card;
 
 
 const { Title, Text } = Typography;
@@ -23,6 +25,24 @@ export default function HomePage() {
     const [tenant, setTenant] = useState<TenantDetailsDTO|null>(null);
     const [loading, setLoading] = useState(false);
 
+     const summaryCards = [
+    {
+      title: "Initiate Lease",
+      value: "Invite your landlord to start agreement",
+      icon: <PlusOutlined />,
+      color: "#FAFFFA",
+      buttonStyle: { backgroundColor: "#52c41a", borderColor: "#52c41a", color: "#fff" },
+    },
+    // {
+    //   title: "Tenants",
+    //   value: 0,
+    //   icon: <TeamOutlined />,
+    //   color: "#f59e0b",
+    //   buttonStyle: { backgroundColor: "#f59e0b", borderColor: "#f59e0b", color: "#fff" },
+    // },
+    //   { title: "Properties", value: 0, icon: <HomeOutlined />, color: "#22c55e" },
+    //   { title: "Units", value: 0, icon: <BankOutlined />, color: "#2563eb" },
+    ];
 
     function isTokenExpired(token?: string): boolean 
     {
@@ -140,15 +160,47 @@ export default function HomePage() {
   return (
         <>
             {contextHolder}
-            <Row justify={"center"} align="middle">
-                <Col xs ={24} sm={24} md={16} lg={16} style={{alignItems:"center"}} >
-                    <Result
-                        icon={<UserOutlined />}
-                        title={tenant.firstName+" "+tenant.lastName}
-                        extra={tenant.phoneNumber}
-                    />
+            <Row style={{marginTop:24}}>
+                <Col span={24}>
+                    <Card variant="borderless">
+                        <Meta 
+                            title={`Good day, ${accountState.accountDetails?.userDetails.firstName}`}
+                            description={"Here is your rental overview. Stay on top of your rent and manage your lease"}
+                        />
+                    </Card>
                 </Col>
-                <Col xs ={24} sm={24} md={16} lg={16}>
+            </Row>
+
+
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 , marginTop:24}}>
+                {summaryCards.map((card) => (
+                    <Col xs={24} sm={12} md={6} key={card.title}>
+                        <Card hoverable style={{ borderRadius: 16, border: "1px solid #eaf0f6", boxShadow: "none", backgroundColor:card.color }} >
+                            
+                            <Flex vertical>
+                                <div>
+                                    <Avatar icon={card.icon}/>
+                                </div>
+                                <div>
+                                    <Title level={3}>{card.title}</Title>
+                                    <Text>{card.value}</Text>
+                                </div>
+                                <div>
+                                    <Button variant="solid" style={card.buttonStyle}><PlusOutlined />Create a lease</Button>
+                                </div>
+                            </Flex>
+                            
+                        </Card>
+                    </Col>
+                ))}
+            </Row>
+      
+            <Row 
+                // justify={"center"}
+                //  align="middle"
+            >
+
+                <Col xs ={24} sm={24} md={24} lg={24}>
                     <Tabs
                         defaultActiveKey="1"
                         centered

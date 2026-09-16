@@ -47,7 +47,6 @@ export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtTo
                     itemRender={(item) => (
                         <Card
                             onClick={() => navigate(`/leases/${item.id}`)}
-                            style={{ cursor: "pointer" }}
                         >
                             <Meta
                                 avatar={
