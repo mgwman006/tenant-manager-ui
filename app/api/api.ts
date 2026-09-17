@@ -47,7 +47,7 @@ apiClient.interceptors.response.use(
   }
 );
 
-export const tenantInvitationApi = {
+export const invitationApi = {
     getActiveInvitationsByPhoneNumber: async (phoneNumber :string, jwtToken: string) => {
         const results = await apiClient.get<ApiResponse<TenantInvitationDetailsDTO[]>>(`/tenant-invitations/phone/${phoneNumber}`,
             {

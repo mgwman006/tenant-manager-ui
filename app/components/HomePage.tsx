@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Card, Typography, Button, notification, Result, Avatar, Tabs, Spin, Row, Col, Alert, Flex, Modal, Form, InputNumber, Input, Select, Radio } from "antd";
+import { Card, Typography, Button, notification, Result, Avatar, Tabs, Spin, Row, Col, Alert, Flex, Modal, Form, InputNumber, Input, Select, Radio, Badge } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAccount } from "../store/account/AccountContext";
 import { AccountState, TenantDetailsDTO, TenantInvitationDetailsDTO } from "../models/user";
-import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined, RightOutlined, BellOutlined } from "@ant-design/icons";
+import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined, RightOutlined, BellOutlined, WalletFilled, PayCircleOutlined, ScheduleOutlined, CreditCardOutlined } from "@ant-design/icons";
 import { LeaseCreateDTO, LeaseDetailsDTO } from "../models/lease";
 import { tenantApi } from "../api/api";
 import Leases from "./lease/Leases";
 import Invitations from "./invitation/Invitations";
 import { createLease } from "../services/leaseService";
+import { getActiveInvitations } from "../services/invitationService";
 
 const {Meta} = Card;
 
@@ -26,31 +27,54 @@ export default function HomePage() {
     const [tenant, setTenant] = useState<TenantDetailsDTO|null>(null);
     const [loading, setLoading] = useState(false);
     const [isLeaseModalOpen, setIsLeaseModalOpen] = useState(false);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [leaseForm] = Form.useForm<LeaseCreateDTO>();
     const [invitesCount,setInvitesCount] = useState<number>(0);
+    const [activeLeaseAmountDue,setActiveLeaseAmountDue] = useState<number>(0);
+    const [invitations, setInvitations] = useState<TenantInvitationDetailsDTO[]>([]);
 
     const summaryCards = [
-    {
-      title: "Initiate Lease",
-      value: "Invite your landlord to start agreement",
-      icon: <PlusOutlined />,
-      color: "#FAFFFA",
-      buttonStyle: { backgroundColor: "#52c41a", borderColor: "#52c41a", color: "#fff" },
-      buttonText: "Create Lease",
-      buttonIcon: <PlusOutlined />
-    },
-    {
-      title: "Invites",
-      value: 0,
-      icon: <BellOutlined />,
-      color: "#EDF4FF",
-      buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
-      buttonText: "Open",
-      buttonIcon: <ArrowRightOutlined />
-
-    },
-    //   { title: "Properties", value: 0, icon: <HomeOutlined />, color: "#22c55e" },
-    //   { title: "Units", value: 0, icon: <BankOutlined />, color: "#2563eb" },
+        {
+            title: "Initiate Lease",
+            value: "Invite your landlord to start agreement",
+            icon: <PlusOutlined />,
+            color: "#FAFFFA",
+            buttonStyle: { backgroundColor: "#52c41a", borderColor: "#52c41a", color: "#fff" },
+            buttonText: "Create Lease",
+            buttonIcon: <PlusOutlined />,
+            onClick: () => setIsLeaseModalOpen(true),
+        },
+         {
+            title: "Invitations",
+            value: `You have ${invitesCount} invitaions to respond`,
+            icon: <Badge count={invitesCount}><BellOutlined /></Badge>,    
+            color: "#EDF4FF",
+            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
+            buttonText: "View more",
+            buttonIcon: <ArrowRightOutlined />,
+            onClick: () => setIsInviteModalOpen(true),
+        },
+        {
+            title: "Amount Due",
+            value: activeLeaseAmountDue,
+            icon: <ScheduleOutlined />,
+            color: "#FFFCFC",
+            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
+            buttonText: "Pay now",
+            buttonIcon: <PayCircleOutlined />,
+            onClick: () => {},
+        },
+        {
+            title: "Lease Fund",
+            value: invitesCount,
+            icon: <CreditCardOutlined />,
+            color: "#FFFFED",
+            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
+            buttonText: "Load Fund",
+            buttonIcon: <ArrowRightOutlined />,
+            onClick: () => {},
+        }
+       
     ];
 
     function isTokenExpired(token?: string): boolean 
@@ -128,6 +152,13 @@ export default function HomePage() {
         setIsLeaseModalOpen(false);
     };
 
+    const loadInvitations = async (tokeb : string) =>
+    {
+        const invites = await getActiveInvitations(tenant?.phoneNumber??"",tokeb ?? "",notificationApi);
+        setInvitesCount(invites.length)
+        setInvitations(invitations);
+    }
+
     useEffect(() => {
         if(!accountStateString){
             accountStateString = JSON.stringify(accountState);
@@ -161,7 +192,10 @@ export default function HomePage() {
             }
 
             loadTenant(details.userDetails.id,details.token);
-            setInvitesCount(0);
+            loadInvitations(details.token);
+
+            ;
+
              
         
         } catch (error) {
@@ -206,25 +240,21 @@ export default function HomePage() {
             <Row gutter={[16, 16]} style={{ marginBottom: 24 , marginTop:24}}>
                 {summaryCards.map((card) => (
                     <Col xs={24} sm={12} md={6} key={card.title}>
-                        <Card hoverable style={{ borderRadius: 16, border: "1px solid #eaf0f6", boxShadow: "none", backgroundColor:card.color }} >
-                            
-                            <Flex vertical>
-                                <div>
-                                    <Avatar icon={card.icon}/>
-                                </div>
-                                <div>
-                                    <Title level={3}>{card.title}</Title>
-                                    <Title level={5}>{card.value}</Title>
-                                </div>
-                                <div>
-                                    <Button
-                                        variant="solid"
-                                        style={card.buttonStyle}
-                                        onClick={() => setIsLeaseModalOpen(true)}
-                                    >
-                                        {card.buttonIcon} {card.buttonText}
-                                    </Button>
-                                </div>
+                        <Card 
+                            onClick={card.onClick}
+                            hoverable 
+                            style={{ borderRadius: 16, border: "1px solid #eaf0f6", boxShadow: "none", backgroundColor:card.color }} 
+                        >
+                            <Flex
+                                justify="space-between"
+                            >
+
+                                <Meta 
+                                    avatar={<Avatar size={50} icon={card.icon}/>}
+                                    title={card.title}
+                                    description={card.value}
+                                />
+                                <RightOutlined />
                             </Flex>
                             
                         </Card>
@@ -372,6 +402,15 @@ export default function HomePage() {
                     </Form.Item>
                 </Form>
             </Modal>
+
+            <Modal
+                title="Invitations"
+                open={isInviteModalOpen}
+                onCancel={() => setIsInviteModalOpen(false)}
+                footer={null}
+            >
+                <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />
+            </Modal>
       
             <Row 
                 // justify={"center"}
@@ -385,13 +424,20 @@ export default function HomePage() {
                         items={[
                             {
                                 key: '1',
-                                label: 'Leases',
+                                label: 'Active Leases',
                                 children: <Leases tenantId={tenant.id} jwtToken={accountState.accountDetails?.token} />,
                             },
                             {
+                                disabled:true,
                                 key: '2',
-                                label: 'Invitations',
-                                children: <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />,
+                                label: 'Pending Leases',
+                                // children: <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />,
+                            },
+                            {
+                                disabled:true,
+                                key: '3',
+                                label: 'Expired Leases',
+                                // children: <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />,
                             }
                         ]}
                     />

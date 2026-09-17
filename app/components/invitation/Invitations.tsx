@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Avatar, Card, Empty, Listy, Spin, Tag } from "antd";
 import { MailOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router";
-import { tenantInvitationApi } from "../../api/api";
+import { invitationApi } from "../../api/api";
 import { TenantInvitationDetailsDTO } from "../../models/user";
 
 const { Meta } = Card;
@@ -26,7 +26,7 @@ export default function Invitations({
 
     setLoading(true);
     try {
-      const res = await tenantInvitationApi.getActiveInvitationsByPhoneNumber(phoneNumber, jwtToken);
+      const res = await invitationApi.getActiveInvitationsByPhoneNumber(phoneNumber, jwtToken);
       setInvitations(Array.isArray(res) ? res : []);
     } catch (error) {
       console.error("Failed to load invitations", error);

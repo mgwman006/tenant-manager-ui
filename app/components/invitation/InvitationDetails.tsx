@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Descriptions, notification, Result, Spin, Tag, Typography } from "antd";
-import { leaseApi, tenantInvitationApi } from "../../api/api";
+import { leaseApi, invitationApi } from "../../api/api";
 import { AccountState, TenantInvitationDetailsDTO } from "../../models/user";
 import { useAccount } from "../../store/account/AccountContext";
 import { LeaseDetailsDTO } from "../../models/lease";
@@ -89,7 +89,7 @@ function isTokenExpired(token?: string): boolean
 
 
     try {
-      const data = await tenantInvitationApi.getByInvitationToken(invitationToken,jwtToken);
+      const data = await invitationApi.getByInvitationToken(invitationToken,jwtToken);
       setInvitation(data);
 
       if(data.leaseId)
@@ -152,7 +152,7 @@ function isTokenExpired(token?: string): boolean
 
     setAccepting(true);
     try {
-      await tenantInvitationApi.acceptInvitation(invitationToken, userId, jwtToken);
+      await invitationApi.acceptInvitation(invitationToken, userId, jwtToken);
       notificationApi.success({
         message: "Invitation accepted",
         description: "Your lease details are now available.",
