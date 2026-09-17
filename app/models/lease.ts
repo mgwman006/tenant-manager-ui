@@ -43,13 +43,13 @@ export interface LeaseCreateDTO {
   rentalProfileId: number;
   unitId: number;
   tenantId?: number;
-  landlordFirstName?: string;
-  tenantLastName?: string;
-  tenantPhoneNumber?: string;
+  landlordFirstName: string;
+  landlordLastName: string;
+  landlordPhoneNumber: string;
   startDate?: string;
   endDate?: string;
   rentAmount: number;
   currency: string;
   rentFrequency?: RentFrequency;
-  fullLeasePaymentRequired: boolean;
+  fullLeasePaymentRequired?: boolean;
 }

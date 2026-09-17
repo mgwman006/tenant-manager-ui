@@ -100,7 +100,7 @@ function isTokenExpired(token?: string): boolean
     } catch (error: any) {
       notificationApi.error({
         message: error.message ?? "Unable to load invitation",
-        description: error.data ?? "The invitation could not be loaded.",
+        description: error.details ?? "The invitation could not be loaded.",
       });
     } finally {
       setLoading(false);

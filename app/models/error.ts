@@ -1,6 +1,6 @@
 export type ApiErrorData = {
   message: string;
-  data: string | Record<string, string> | null;
+  details: string | Record<string, string> | null;
   statusCode: number;
 };
 
@@ -12,6 +12,15 @@ export class ApiError extends Error {
     super(values.message);
     this.name = "ApiError";
     this.statusCode = values.statusCode;
-    this.details = values.data;
+    this.details = values.details;
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      statusCode: this.statusCode,
+      details: this.details,
+    };
   }
 }

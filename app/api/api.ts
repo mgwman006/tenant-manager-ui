@@ -21,7 +21,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(
         new ApiError({
           message: message ?? "SERVER_ERROR",
-          data: data ?? null,
+          details: data ?? null,
           statusCode: statusCode ?? error.response.status,
         })
       );
@@ -31,7 +31,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(
         new ApiError({
           message: "NETWORK_ERROR",
-          data: "No response from server",
+          details: "No response from server",
           statusCode: 0,
         })
       );
@@ -40,7 +40,7 @@ apiClient.interceptors.response.use(
     return Promise.reject(
       new ApiError({
         message: "CLIENT_ERROR",
-        data: "Unexpected error occurred",
+        details: "Unexpected error occurred",
         statusCode: 0,
       })
     );
@@ -117,7 +117,7 @@ export const leaseApi = {
   },
 
   createLease: async (requestBody: LeaseCreateDTO, token: string) => {
-    const res = await apiClient.post<ApiResponse<LeaseDetailsDTO>>(`/leases`, requestBody, {
+    const res = await apiClient.post<ApiResponse<LeaseDetailsDTO>>(`/leases/tenant`, requestBody, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
