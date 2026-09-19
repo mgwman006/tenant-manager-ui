@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Alert, Breadcrumb, Button, Card, Col, Flex, Form, Input, notification, Progress, Result, Row, Spin, Statistic, Typography } from "antd";
+import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Flex, Form, Input, notification, Progress, Result, Row, Spin, Typography } from "antd";
 import { leaseApi } from "../../api/api";
 import { LeaseDetailsDTO, RentPaymentOutstanding } from "../../models/lease";
 import { useAccount } from "../../store/account/AccountContext";
@@ -121,11 +121,30 @@ export default function LeaseDetails() {
       <Row>
         <Col span={24}>
           <Card title="Rent Summary" style={{ maxWidth: 760 }}>
-
-              <Statistic title="Total Amount (TZS)" value={rentPaymentOutstanding.totalAmount.toLocaleString()} />
-              <Statistic title="Amount Paid (TZS)" value={rentPaymentOutstanding.amountPaid.toLocaleString()} />
-              <Statistic title="Outstanding Amount (TZS)" value={rentPaymentOutstanding.outstandingAmount.toLocaleString()} />
-              <Statistic title="Due Date" value={rentPaymentOutstanding.dueDate.toLocaleString()} />
+              <Descriptions
+                size="small"
+                column={1}
+                layout="horizontal"
+              >
+                <Descriptions.Item label={`Rent amount (TZS) ${rentPaymentOutstanding.rentFrequency}`}>
+                  {rentPaymentOutstanding.rentAmount.toLocaleString()}
+                </Descriptions.Item>
+                <Descriptions.Item label="Lease Period">
+                  {rentPaymentOutstanding.period}
+                </Descriptions.Item>
+                <Descriptions.Item label="Total Rent Amount (TZS)">
+                  {rentPaymentOutstanding.totalAmount.toLocaleString()}
+                </Descriptions.Item>
+                <Descriptions.Item label="Amount Paid (TZS)">
+                  {rentPaymentOutstanding.amountPaid.toLocaleString()}
+                </Descriptions.Item>
+                <Descriptions.Item label="Outstanding Amount (TZS)">
+                  {rentPaymentOutstanding.outstandingAmount.toLocaleString()}
+                </Descriptions.Item>
+                <Descriptions.Item label="Due Date">
+                  {rentPaymentOutstanding.dueDate}
+                </Descriptions.Item>
+              </Descriptions>
 
               <div style={{ marginTop: 8 }}>
                 <Progress

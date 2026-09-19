@@ -68,5 +68,6 @@ export interface RentPaymentOutstanding{
   amountPaid: number;
   outstandingAmount: number;
   status: RentPaymentStatus,
-  dueDate: string
+  dueDate: string,
+  period: string
 }
