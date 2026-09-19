@@ -9,10 +9,10 @@ export enum PaymentPeriod {
 }
 
 export enum RentFrequency {
-  DAILY = "DAILY",
-  WEEKLY = "WEEKLY",
-  MONTHLY = "MONTHLY",
-  YEARLY = "YEARLY",
+  DAILY = "Per Day",
+  WEEKLY = "Per Week",
+  MONTHLY = "Per Month",
+  YEARLY = "Per Year",
 }
 
 export enum LeaseStatus {
@@ -20,6 +20,14 @@ export enum LeaseStatus {
   ENDED = "ENDED",
   TERMINATED = "TERMINATED",
   PENDING = "PENDING",
+}
+
+export enum RentPaymentStatus
+{
+  PAID = "PAID",
+  PARTIALLY_PAID = "PARTIALLY_PAID",
+  UNPAID = "UNPAID",
+  OVER_PAID = "OVER_PAID"
 }
 
 export interface LeaseDetailsDTO {
@@ -31,9 +39,6 @@ export interface LeaseDetailsDTO {
   currency: string;
   rentFrequency:RentFrequency;
   fullLeasePaymentRequired:boolean;
-  totalAmount:number;
-  amountPaid:number;
-  balance:number;
   status: LeaseStatus;
   tenant?: TenantDetailsDTO;
   tenantInvitations?: TenantInvitationDetailsDTO[];
@@ -52,4 +57,16 @@ export interface LeaseCreateDTO {
   currency: string;
   rentFrequency?: RentFrequency;
   fullLeasePaymentRequired?: boolean;
+}
+
+export interface RentPaymentOutstanding{
+  leaseReferenceNumber:string;
+  rentAmount: number;
+  rentFrequency: string;
+  fullLeasePaymentRequired: boolean;
+  totalAmount: number;
+  amountPaid: number;
+  outstandingAmount: number;
+  status: RentPaymentStatus,
+  dueDate: string
 }

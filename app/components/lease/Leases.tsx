@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, Listy, Spin, Avatar, Tag, Empty } from "antd";
 import { ProfileOutlined } from "@ant-design/icons";
-import { LeaseDetailsDTO } from "../../models/lease";
+import { LeaseDetailsDTO, LeaseStatus } from "../../models/lease";
 import { leaseApi } from "../../api/api";
 import { useNavigate } from "react-router";
 
@@ -57,10 +57,10 @@ export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtTo
                                     </Avatar>
                                 }
                                 title={
-                                    item.amountPaid === item.totalAmount ? (
-                                        <Tag color="success">Paid</Tag>
+                                    item.status === LeaseStatus.ACTIVE ? (
+                                        <Tag color="success">{item.status}</Tag>
                                     ) : (
-                                        <Tag color="error">Unpaid</Tag>
+                                        <Tag color="error">{item.status}</Tag>
                                     )
                                 }
                                 description={

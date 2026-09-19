@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Card, notification, Progress, Spin, Typography } from "antd";
+import { Alert, Breadcrumb, Button, Card, Col, Flex, Form, Input, notification, Progress, Result, Row, Spin, Statistic, Typography } from "antd";
 import { leaseApi } from "../../api/api";
-import { LeaseDetailsDTO } from "../../models/lease";
+import { LeaseDetailsDTO, RentPaymentOutstanding } from "../../models/lease";
 import { useAccount } from "../../store/account/AccountContext";
+import { getRentPaymentOutstanding, getLease } from "../../services/leaseService";
+import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined, RightOutlined, BellOutlined, WalletFilled, PayCircleOutlined, ScheduleOutlined, CreditCardOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+
 
 const { Title, Text } = Typography;
 const authUrl = import.meta.env.VITE_AUTH_URL?.trim();
@@ -16,6 +19,7 @@ export default function LeaseDetails() {
   const [loading, setLoading] = useState(true);
   const [notificationApi, contextHolder] = notification.useNotification();
   const { accountState } = useAccount();
+  const [rentPaymentOutstanding,setRentPaymentOutstanding] = useState<RentPaymentOutstanding|null>();
 
   const navigateToAuthFromLeaseDeatils = (nextApp: string = "tenant-manager") => {
     if (!authUrl) {
@@ -36,8 +40,19 @@ export default function LeaseDetails() {
     window.location.href = url;
   };
 
+  
+  const loadAcceptedLease = async (jwtToken:string) => {
+    const leaseDetails = await getLease(Number(leaseId), jwtToken, notificationApi);
+    setLease(leaseDetails);
+  }
+
+  const loadRentPaymentOutstanding = async (jwtToken:string) => {
+    const rentPayment = await getRentPaymentOutstanding(Number(leaseId), jwtToken, notificationApi);
+    setRentPaymentOutstanding(rentPayment);
+  }
+  
   useEffect(() => {
-    const loadAcceptedLease = async () => {
+    const loadLeaseDetails = async () => {
       const jwtToken = accountState.accountDetails?.token;
       if (!jwtToken) {
         notificationApi.error({
@@ -58,20 +73,13 @@ export default function LeaseDetails() {
         return;
       }
 
-      try {
-        const leaseDetails = await leaseApi.getLeaseById(Number(leaseId), jwtToken);
-        setLease(leaseDetails);
-      } catch (error: any) {
-        notificationApi.error({
-          message: "Unable to load lease details",
-          description: error?.message ?? "The lease details could not be loaded.",
-        });
-      } finally {
-        setLoading(false);
-      }
+      
+      loadAcceptedLease(jwtToken);
+      loadRentPaymentOutstanding(jwtToken);
+      setLoading(false);
     };
 
-    void loadAcceptedLease();
+    void loadLeaseDetails();
   }, [leaseId, accountState.accountDetails?.token, notificationApi]);
 
   if (loading) {
@@ -95,77 +103,96 @@ export default function LeaseDetails() {
     );
   }
 
-  const currency = lease.currency || "TSh";
-  const totalObligation = Number(lease.totalAmount ?? lease.rentAmount ?? 0);
-  const amountPaid = Number(lease.amountPaid ?? 0);
-  const remaining = Math.max(totalObligation - amountPaid, 0);
-  const fullyPaid = remaining <= 0;
-  const progressPercent = totalObligation > 0 ? Math.min((amountPaid / totalObligation) * 100, 100) : 0;
-  const recommendedMonthly = Math.max(Number(lease.rentAmount ?? lease.totalAmount ?? 0), 0);
-  const rentPerid = lease.rentFrequency ?? "Month";
+  if(!rentPaymentOutstanding)
+  {
+    return <div>{contextHolder}error</div>;
+  }
 
-  const dueDate = lease.endDate ? new Date(lease.endDate) : null;
-  const dueLabel = dueDate && !Number.isNaN(dueDate.getTime())
-    ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" }).format(dueDate)
-    : "—";
+  const fullyPaid = rentPaymentOutstanding?.outstandingAmount <= 0;
+  const progressPercent = rentPaymentOutstanding?.totalAmount??0 > 0 ? Math.min((rentPaymentOutstanding?.amountPaid  / rentPaymentOutstanding?.totalAmount) * 100, 100) : 0;
+
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", padding: 24 }}>
       {contextHolder}
-      <Card style={{ maxWidth: 760, margin: "0 auto", borderRadius: 16, boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)" }}>
-        <Title level={2} style={{ marginBottom: 24 }}>Your Rent</Title>
+      <Button color="geekblue" onClick={() => navigate(-1)}><ArrowLeftOutlined/> Back</Button>
 
-        <div style={{ display: "grid", gap: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Text type="secondary">Total obligation:</Text>
-            <Text strong style={{ fontSize: 18 }}>{currency} {totalObligation.toLocaleString()}</Text>
-          </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Text type="secondary">Due:</Text>
-            <Text strong>{dueLabel}</Text>
-          </div>
+      <Row>
+        <Col span={24}>
+          <Card title="Rent Summary" style={{ maxWidth: 760 }}>
 
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Text type="secondary">Paid:</Text>
-            <Text strong>{currency} {amountPaid.toLocaleString()}</Text>
-          </div>
+              <Statistic title="Total Amount (TZS)" value={rentPaymentOutstanding.totalAmount.toLocaleString()} />
+              <Statistic title="Amount Paid (TZS)" value={rentPaymentOutstanding.amountPaid.toLocaleString()} />
+              <Statistic title="Outstanding Amount (TZS)" value={rentPaymentOutstanding.outstandingAmount.toLocaleString()} />
+              <Statistic title="Due Date" value={rentPaymentOutstanding.dueDate.toLocaleString()} />
 
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Text type="secondary">Remaining:</Text>
-            <Text strong style={{ color: fullyPaid ? "#389e0d" : "#d4380d" }}>
-              {currency} {remaining.toLocaleString()}
-            </Text>
-          </div>
+              <div style={{ marginTop: 8 }}>
+                <Progress
+                  percent={Math.round(progressPercent)}
+                  showInfo
+                  strokeColor={fullyPaid ? "#52c41a" : "#1677ff"}
+                  trailColor="#e6f4ff"
+                  format={(percent) => `${percent}%`}
+                />
+              </div>
+          </Card>
+        </Col>
+      </Row>
 
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Text type="secondary">Recommended:</Text>
-            <Text strong>{currency} {recommendedMonthly.toLocaleString()}/{rentPerid}</Text>
-          </div>
-
-          <div style={{ marginTop: 8 }}>
-            <Progress
-              percent={Math.round(progressPercent)}
-              showInfo
-              strokeColor={fullyPaid ? "#52c41a" : "#1677ff"}
-              trailColor="#e6f4ff"
-              format={(percent) => `${percent}%`}
+      {
+        fullyPaid ? (
+           <Result
+              status="success"
+              title="You are sorted"
+              subTitle="There is not pending payment"
             />
-          </div>
-        </div>
+        )
+        : (
+          <Row>
+            <Col span={24}>
+              <Card 
+                title="Rent payment"
+                style={{ maxWidth: 760, width: "100%" }}>
 
-        {!fullyPaid && (
-          <Button
-            type="primary"
-            size="large"
-            block
-            style={{ marginTop: 24, height: 46, fontWeight: 600 }}
-            // onClick={() => navigate(`/lease/${lease.id}`)}
-          >
-            Pay Rent
-          </Button>
-        )}
-      </Card>
+                  <Alert
+                    title={lease.fullLeasePaymentRequired
+                      ? "Your landlord is requesting full payment for this lease"
+                      : "Month-to-month payment is allowed for this lease"}
+                    type={lease.fullLeasePaymentRequired ? "warning" : "success"}
+                    showIcon
+                    style={{ marginBottom: 24, whiteSpace: "normal" }}
+                  />
+
+                  <Form
+                    name="customized_form_controls"
+                    layout="vertical"
+                    //onFinish={onFinish}
+                    initialValues={{
+                      amount: rentPaymentOutstanding.fullLeasePaymentRequired?rentPaymentOutstanding.outstandingAmount:rentPaymentOutstanding.rentAmount,
+                    }}
+                  >
+                    <Form.Item name="amount">
+                      <Input 
+                        suffix="TZS" 
+                        disabled={rentPaymentOutstanding.fullLeasePaymentRequired}
+                      />
+                    </Form.Item>
+                    <Form.Item>
+                      <Button type="primary" htmlType="submit">
+                        <CreditCardOutlined /> Pay Rent
+                      </Button>
+                    </Form.Item>
+                  </Form>
+
+          
+              </Card>
+            </Col>
+          </Row>
+        )
+
+      }
+      
     </div>
   );
 }

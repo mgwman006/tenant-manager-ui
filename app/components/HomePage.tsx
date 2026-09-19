@@ -156,7 +156,7 @@ export default function HomePage() {
     {
         const invites = await getActiveInvitations(tenant?.phoneNumber??"",tokeb ?? "",notificationApi);
         setInvitesCount(invites.length)
-        setInvitations(invitations);
+        setInvitations(invites);
     }
 
     useEffect(() => {
@@ -193,8 +193,6 @@ export default function HomePage() {
 
             loadTenant(details.userDetails.id,details.token);
             loadInvitations(details.token);
-
-            ;
 
              
         
