@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Card, Listy, Spin, Avatar, Tag, Empty } from "antd";
-import { ProfileOutlined } from "@ant-design/icons";
+import { Card, Listy, Spin, Avatar, Tag, Empty, Flex, Button, Row, Col } from "antd";
+import { CreditCardOutlined, MoreOutlined, ProfileOutlined } from "@ant-design/icons";
 import { LeaseDetailsDTO, LeaseStatus } from "../../models/lease";
 import { leaseApi } from "../../api/api";
 import { useNavigate } from "react-router";
@@ -45,31 +45,42 @@ export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtTo
                     items={leases}
                     rowKey="id"
                     itemRender={(item) => (
-                        <Card
-                            onClick={() => navigate(`/leases/rent/${item.id}`)}
-                        >
-                            <Meta
-                                avatar={
-                                    <Avatar 
-                                        size={52} 
-                                        style={{ backgroundColor: "#e6f4ff", color: "#1677ff" }}>
-                                        <ProfileOutlined style={{ fontSize: 28 }} />
-                                    </Avatar>
-                                }
-                                title={
-                                    item.status === LeaseStatus.ACTIVE ? (
-                                        <Tag color="success">{item.status}</Tag>
-                                    ) : (
-                                        <Tag color="error">{item.status}</Tag>
-                                    )
-                                }
-                                description={
-                                    <div>
-                                        <div>Start Date: {item.startDate}</div>
-                                        <div>End Date: {item.endDate}</div>
-                                    </div>
-                                }
-                            />
+                        <Card>
+
+                            <Row gutter={[16, 16]}>
+                                <Col xs={24} sm={18} lg={18} xl={18}>
+                                    <Meta
+                                    avatar={
+                                        <Avatar 
+                                            size={52} 
+                                            style={{ backgroundColor: "#e6f4ff", color: "#1677ff" }}>
+                                            <ProfileOutlined style={{ fontSize: 28 }} />
+                                        </Avatar>
+                                    }
+                                    title={
+                                        item.status === LeaseStatus.ACTIVE ? (
+                                            <Tag color="success">{item.status}</Tag>
+                                        ) : (
+                                            <Tag color="error">{item.status}</Tag>
+                                        )
+                                    }
+                                    description={
+                                        <div>
+                                            <div>Start Date: {item.startDate}</div>
+                                            <div>End Date: {item.endDate}</div>
+                                        </div>
+                                    }
+                                />
+                                </Col>
+                                <Col xs={24} sm={4} lg={4} xl={4}>
+                                    <Flex vertical gap="medium" >
+                                        <Button onClick={() => navigate(`/leases/rent/${item.id}`)} variant="filled" color="primary">Rent Sumary <CreditCardOutlined /></Button>
+                                        <Button variant="filled" color="orange">Lease Details <MoreOutlined /></Button>
+                                    </Flex>
+                                </Col>
+                                
+                            </Row>
+                            
                         </Card>
                     )}
                 />
