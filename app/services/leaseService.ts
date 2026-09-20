@@ -1,6 +1,6 @@
 import { NotificationInstance } from "antd/es/notification/interface";
 import { leaseApi } from "../api/api";
-import { LeaseCreateDTO, LeaseDetailsDTO, RentPaymentOutstanding } from "../models/lease";
+import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO } from "../models/lease";
 import { ApiError } from "../models/error";
 
 
@@ -27,9 +27,9 @@ export const createLease = async (leaseDTO:LeaseCreateDTO, jwtToken:string, noti
     }
 }
 
-export const getRentPaymentOutstanding = async (leaseId:number, jwtToken:string, notificationApi:NotificationInstance) :Promise<RentPaymentOutstanding | null> => {
+export const getRentSummary = async (leaseId:number, jwtToken:string, notificationApi:NotificationInstance) :Promise<RentSummaryDTO | null> => {
     try {
-        const data = await leaseApi.getRentOutstanding(leaseId, jwtToken);
+        const data = await leaseApi.getRentSummary(leaseId, jwtToken);
         return data;
     } catch (error: unknown) {
         const apiError = error as ApiError;

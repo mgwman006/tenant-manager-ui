@@ -27,8 +27,15 @@ export enum RentPaymentStatus
   PAID = "PAID",
   PARTIALLY_PAID = "PARTIALLY_PAID",
   UNPAID = "UNPAID",
-  OVER_PAID = "OVER_PAID"
 }
+
+export enum PaymentBlockStatus
+{
+  PAID = "PAID",
+  UNPAID = "UNPAID",
+}
+
+PaymentBlockStatus
 
 export interface LeaseDetailsDTO {
   referenceNumber: string;
@@ -59,15 +66,21 @@ export interface LeaseCreateDTO {
   fullLeasePaymentRequired?: boolean;
 }
 
-export interface RentPaymentOutstanding{
-  leaseReferenceNumber:string;
-  rentAmount: number;
-  rentFrequency: string;
-  fullLeasePaymentRequired: boolean;
-  totalAmount: number;
-  amountPaid: number;
-  outstandingAmount: number;
+export interface RentSummaryDTO{
+  totalExpectedAmount: number;
+  totalPaidAmount: number;
+  totalOutstandingAmount: number;
   status: RentPaymentStatus,
-  dueDate: string,
-  period: string
+  paymentBlocks: PaymentBlockSummaryDTO[],
+}
+
+export interface PaymentBlockSummaryDTO{
+  id:number;
+  amount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  startDate:string;
+  endDate:string;
+  dueDate: string;
+  status: PaymentBlockStatus
 }

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ApiResponse } from "../models/common";
 import { ApiError } from "../models/error";
-import { LeaseCreateDTO, LeaseDetailsDTO, RentPaymentOutstanding } from "../models/lease";
+import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO } from "../models/lease";
 import { TenantDetailsDTO, TenantInvitationCreateDTO, TenantInvitationDetailsDTO } from "../models/user";
 
 const apiUrl = import.meta.env.VITE_RENT_MANAGER_API_URL;
@@ -124,8 +124,8 @@ export const leaseApi = {
     });
     return handleResponse(res.data);
   },
-  getRentOutstanding: async (leaseId: number, token: string) => {
-    const res = await apiClient.get<ApiResponse<RentPaymentOutstanding>>(`/leases/rent/outstanding/${leaseId}`,  {
+  getRentSummary: async (leaseId: number, token: string) => {
+    const res = await apiClient.get<ApiResponse<RentSummaryDTO>>(`/leases/rent/summary/${leaseId}`,  {
       headers: {
         Authorization: `Bearer ${token}`,
       },
