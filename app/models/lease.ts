@@ -1,4 +1,4 @@
-import { TenantDetailsDTO, TenantInvitationDetailsDTO } from "./user";
+import { TenantDetailsDTO } from "./user";
 
 export enum PaymentPeriod {
   DAILY = "DAILY",
@@ -35,35 +35,59 @@ export enum PaymentBlockStatus
   UNPAID = "UNPAID",
 }
 
-PaymentBlockStatus
+export enum LeaseInvitationStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+  EXPIRED = "EXPIRED",
+  REJECTED = "REJECTED",
+  CANCELED = "CANCELED",
+}
+
+export interface LeaseInvitationDetailsDTO {
+  id: number;
+  leaseId: number;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  email: string;
+  invitationToken: string;
+  status: LeaseInvitationStatus;
+  expiresAt: string;
+  acceptedAt?: string;
+  sentAt?: string;
+}
+
 
 export interface LeaseDetailsDTO {
   referenceNumber: string;
   id: number;
   startDate: string; // ISO date
   endDate: string; // ISO date
-  rentAmount: number;
-  currency: string;
-  rentFrequency:RentFrequency;
+  rent: RentDTO,
   fullLeasePaymentRequired:boolean;
   status: LeaseStatus;
-  tenant?: TenantDetailsDTO;
-  tenantInvitations?: TenantInvitationDetailsDTO[];
+  tenant: TenantDetailsDTO;
+  invitations: LeaseInvitationDetailsDTO[];
+}
+
+export interface RentDTO{
+    id :number,
+    amount : number,
+    currency : string,
+    frequency: string
 }
 
 export interface LeaseCreateDTO {
   rentalProfileId: number;
   unitId: number;
-  tenantId?: number;
+  tenantId: number;
   landlordFirstName: string;
   landlordLastName: string;
   landlordPhoneNumber: string;
   startDate?: string;
   endDate?: string;
-  rentAmount: number;
-  currency: string;
-  rentFrequency?: RentFrequency;
-  fullLeasePaymentRequired?: boolean;
+  rent: RentDTO;
+  fullLeasePaymentRequired: boolean;
 }
 
 export interface RentSummaryDTO{

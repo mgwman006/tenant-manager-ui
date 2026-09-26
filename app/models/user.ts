@@ -36,35 +36,7 @@ export interface TenantDetailsDTO {
   phoneNumber: string;
 }
 
-export enum TenantInvitationStatus {
-  PENDING = "PENDING",
-  ACCEPTED = "ACCEPTED",
-  EXPIRED = "EXPIRED",
-  REJECTED = "REJECTED",
-  CANCELED = "CANCELED",
-}
 
-export interface TenantInvitationDetailsDTO {
-  id: number;
-  leaseId: number;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  email: string;
-  invitationToken: string;
-  status: TenantInvitationStatus;
-  expiresAt: string;
-  acceptedAt?: string;
-  sentAt?: string;
-}
-
-export interface TenantInvitationCreateDTO {
-  leaseId: number;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  email: string;
-}
 
 export interface AccountDetailsDto {
   id: number;
@@ -82,6 +54,12 @@ export type AccountState = {
   outGoingUrl: string | null;
 };
 
+export type TenantState = {
+  tenantDetails: TenantDetailsDTO | null;
+  loading: boolean;
+  error: string | null;
+};
+
 export type AccountAction =
   | { type: "FETCH_START" }
   | { type: "FETCH_SUCCESS"; payload: AccountDetailsDto }
@@ -90,3 +68,10 @@ export type AccountAction =
   | { type: "APPEND_USER"; payload: string }
   | { type: "APPEND_JWT"; payload: string }
   | { type: "ADD_OUTGOING_URL"; outGoingUrl: string | null };
+
+
+  export type TenantAction =
+  | { type: "FETCH_START" }
+  | { type: "FETCH_SUCCESS"; payload: TenantDetailsDTO }
+  | { type: "FETCH_ERROR"; payload: string }
+  | { type: "LOGOUT" };

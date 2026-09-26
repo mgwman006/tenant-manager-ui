@@ -2,14 +2,15 @@ import React, { useEffect, useState } from "react";
 import { Card, Typography, Button, notification, Result, Avatar, Tabs, Spin, Row, Col, Alert, Flex, Modal, Form, InputNumber, Input, Select, Radio, Badge } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAccount } from "../store/account/AccountContext";
-import { AccountState, TenantDetailsDTO, TenantInvitationDetailsDTO } from "../models/user";
+import { AccountState, TenantDetailsDTO } from "../models/user";
 import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined, RightOutlined, BellOutlined, WalletFilled, PayCircleOutlined, ScheduleOutlined, CreditCardOutlined } from "@ant-design/icons";
-import { LeaseCreateDTO, LeaseDetailsDTO } from "../models/lease";
+import { LeaseCreateDTO, LeaseDetailsDTO, LeaseInvitationDetailsDTO } from "../models/lease";
 import { tenantApi } from "../api/api";
 import Leases from "./lease/Leases";
 import Invitations from "./invitation/Invitations";
 import { createLease } from "../services/leaseService";
 import { getActiveInvitations } from "../services/invitationService";
+import { useTenant } from "../store/tenant/TenantContext";
 
 const {Meta} = Card;
 
@@ -20,6 +21,7 @@ const authUrl = import.meta.env.VITE_AUTH_URL?.trim();
 const tenantManagerUrl = import.meta.env.VITE_TENANT_MANAGER_URL?.trim();
 
 export default function HomePage() {
+    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     let accountStateString = searchParams.get("state");
     const [notificationApi, contextHolder] = notification.useNotification();
@@ -31,51 +33,11 @@ export default function HomePage() {
     const [leaseForm] = Form.useForm<LeaseCreateDTO>();
     const [invitesCount,setInvitesCount] = useState<number>(0);
     const [activeLeaseAmountDue,setActiveLeaseAmountDue] = useState<number>(0);
-    const [invitations, setInvitations] = useState<TenantInvitationDetailsDTO[]>([]);
+    const [invitations, setInvitations] = useState<LeaseInvitationDetailsDTO[]>([]);
+    const { tenantState, dispatchTenantState } = useTenant();
 
-    const summaryCards = [
-        {
-            title: "Initiate Lease",
-            value: "Invite your landlord to start agreement",
-            icon: <PlusOutlined />,
-            color: "#FAFFFA",
-            buttonStyle: { backgroundColor: "#52c41a", borderColor: "#52c41a", color: "#fff" },
-            buttonText: "Create Lease",
-            buttonIcon: <PlusOutlined />,
-            onClick: () => setIsLeaseModalOpen(true),
-        },
-         {
-            title: "Invitations",
-            value: `You have ${invitesCount} invitaions to respond`,
-            icon: <Badge count={invitesCount}><BellOutlined /></Badge>,    
-            color: "#EDF4FF",
-            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
-            buttonText: "View more",
-            buttonIcon: <ArrowRightOutlined />,
-            onClick: () => setIsInviteModalOpen(true),
-        },
-        {
-            title: "Amount Due",
-            value: activeLeaseAmountDue,
-            icon: <ScheduleOutlined />,
-            color: "#FFFCFC",
-            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
-            buttonText: "Pay now",
-            buttonIcon: <PayCircleOutlined />,
-            onClick: () => {},
-        },
-        {
-            title: "Lease Fund",
-            value: invitesCount,
-            icon: <CreditCardOutlined />,
-            color: "#FFFFED",
-            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
-            buttonText: "Load Fund",
-            buttonIcon: <ArrowRightOutlined />,
-            onClick: () => {},
-        }
-       
-    ];
+
+    
 
     function isTokenExpired(token?: string): boolean 
     {
@@ -126,6 +88,7 @@ export default function HomePage() {
         try {
             const tenantResponse = await tenantApi.getByUserId(userId,jwtToken);
             setTenant(tenantResponse);
+            dispatchTenantState({ type: "FETCH_SUCCESS", payload: tenantResponse });
         } finally {
             setLoading(false);
         }
@@ -145,16 +108,16 @@ export default function HomePage() {
         }
         const newLease: LeaseCreateDTO = {
             ...values,
-            tenantId: tenantId,
+            tenantId: tenantId??0,
         };
 
         const response = await createLease(newLease, token,notificationApi);
         setIsLeaseModalOpen(false);
     };
 
-    const loadInvitations = async (tokeb : string) =>
+    const loadInvitations = async (phoneNumber:string,token : string) =>
     {
-        const invites = await getActiveInvitations(tenant?.phoneNumber??"",tokeb ?? "",notificationApi);
+        const invites = await getActiveInvitations(phoneNumber,token,notificationApi);
         setInvitesCount(invites.length)
         setInvitations(invites);
     }
@@ -192,14 +155,65 @@ export default function HomePage() {
             }
 
             loadTenant(details.userDetails.id,details.token);
-            loadInvitations(details.token);
-
-             
         
         } catch (error) {
             console.error("Failed to parse account state from URL", error);
         }
     }, []);
+
+    useEffect(() => {
+    const token = accountState.accountDetails?.token;
+
+    if (!tenant?.phoneNumber || !token) {
+        return;
+    }
+
+    loadInvitations(tenant.phoneNumber, token);
+}, [tenant?.phoneNumber, accountState.accountDetails?.token]);
+
+    const summaryCards = [
+        {
+            title: "Initiate Lease",
+            value: "Invite your landlord to start agreement",
+            icon: <PlusOutlined />,
+            color: "#FAFFFA",
+            buttonStyle: { backgroundColor: "#52c41a", borderColor: "#52c41a", color: "#fff" },
+            buttonText: "Create Lease",
+            buttonIcon: <PlusOutlined />,
+            onClick: () => navigate('leases/create'),
+        },
+         {
+            title: "Invitations",
+            value: `You have ${invitesCount} invitaions to respond`,
+            icon: <Badge count={invitesCount}><BellOutlined /></Badge>,    
+            color: "#EDF4FF",
+            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
+            buttonText: "View more",
+            buttonIcon: <ArrowRightOutlined />,
+            onClick: () => setIsInviteModalOpen(true),
+        },
+        {
+            title: "Amount Due",
+            value: activeLeaseAmountDue,
+            icon: <ScheduleOutlined />,
+            color: "#FFFCFC",
+            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
+            buttonText: "Pay now",
+            buttonIcon: <PayCircleOutlined />,
+            onClick: () => {},
+        },
+        {
+            title: "Lease Fund",
+            value: invitesCount,
+            icon: <CreditCardOutlined />,
+            color: "#FFFFED",
+            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
+            buttonText: "Load Fund",
+            buttonIcon: <ArrowRightOutlined />,
+            onClick: () => {},
+        }
+       
+    ];
 
     if (loading) {
         return (
@@ -210,14 +224,9 @@ export default function HomePage() {
     }
 
     if(!tenant){
-        return (
-            <Alert
-                title="Error"
-                description="tenant is not defined"
-                type="error"
-                showIcon
-            />
-        );
+        notificationApi.error({
+            description:`Tenant is not valid, recorded value is ${JSON.stringify(tenant)}`
+        });
     }
 
   return (
@@ -406,8 +415,16 @@ export default function HomePage() {
                 open={isInviteModalOpen}
                 onCancel={() => setIsInviteModalOpen(false)}
                 footer={null}
+                width={{
+                    xs: '100%',
+                    sm: '90%',
+                    md: '80%',
+                    lg: '50%',
+                    xl: '50%',
+                    xxl: '50%',
+                }}
             >
-                <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />
+                <Invitations phoneNumber={tenant?.phoneNumber ?? ""} jwtToken={accountState.accountDetails?.token} />
             </Modal>
       
             <Row 
@@ -423,7 +440,7 @@ export default function HomePage() {
                             {
                                 key: '1',
                                 label: 'Active Leases',
-                                children: <Leases tenantId={tenant.id} jwtToken={accountState.accountDetails?.token} />,
+                                children: <Leases tenantId={tenant?.id ?? 0} jwtToken={accountState.accountDetails?.token} />,
                             },
                             {
                                 disabled:true,

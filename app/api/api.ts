@@ -1,8 +1,8 @@
 import axios from "axios";
 import { ApiResponse } from "../models/common";
 import { ApiError } from "../models/error";
-import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO } from "../models/lease";
-import { TenantDetailsDTO, TenantInvitationCreateDTO, TenantInvitationDetailsDTO } from "../models/user";
+import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO,LeaseInvitationDetailsDTO } from "../models/lease";
+import { TenantDetailsDTO } from "../models/user";
 
 const apiUrl = import.meta.env.VITE_RENT_MANAGER_API_URL;
 
@@ -49,7 +49,7 @@ apiClient.interceptors.response.use(
 
 export const invitationApi = {
     getActiveInvitationsByPhoneNumber: async (phoneNumber :string, jwtToken: string) => {
-        const results = await apiClient.get<ApiResponse<TenantInvitationDetailsDTO[]>>(`/lease-invitations/phone/${phoneNumber}`,
+        const results = await apiClient.get<ApiResponse<LeaseInvitationDetailsDTO[]>>(`/lease-invitations/phone/${phoneNumber}`,
             {
                 headers: {
                 'Authorization': `Bearer ${jwtToken}`
@@ -60,7 +60,7 @@ export const invitationApi = {
     },
 
   getByInvitationToken: async (invitationToken:string,jwtToken: string) => {
-    const res = await apiClient.get<ApiResponse<TenantInvitationDetailsDTO>>(`/lease-invitations/${invitationToken}`,
+    const res = await apiClient.get<ApiResponse<LeaseInvitationDetailsDTO>>(`/lease-invitations/${invitationToken}`,
         {
             headers: {
             'Authorization': `Bearer ${jwtToken}`
@@ -71,8 +71,8 @@ export const invitationApi = {
   },
 
   acceptInvitation: async (invitationToken:string, userId:number, jwtToken: string) => {
-    const res = await apiClient.post<ApiResponse<TenantInvitationDetailsDTO>>(
-      `/tenant-invitations/${invitationToken}/accept?userId=${userId}`,
+    const res = await apiClient.post<ApiResponse<LeaseInvitationDetailsDTO>>(
+      `/lease-invitations/${invitationToken}/tenant/accept?userId=${userId}`,
       null,
       {
         headers: {
