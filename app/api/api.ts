@@ -3,6 +3,7 @@ import { ApiResponse } from "../models/common";
 import { ApiError } from "../models/error";
 import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO,LeaseInvitationDetailsDTO } from "../models/lease";
 import { TenantDetailsDTO } from "../models/user";
+import { PaymentTransactionCreateDTO } from "../models/payments";
 
 const apiUrl = import.meta.env.VITE_RENT_MANAGER_API_URL;
 
@@ -143,6 +144,24 @@ export const tenantApi = {
         });
         return handleResponse(res.data);
     }
+};
+
+export const paymentApi = {
+
+  recordPayment: async (tenantId:number,requestBody: PaymentTransactionCreateDTO, token: string) => {
+    const res = await apiClient.post<ApiResponse<String>>(
+      `/payment-blocks/tenant/${tenantId}/record-payment`,
+      requestBody,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    return handleResponse(res.data);
+  }
+ 
 };
 
 export function handleResponse<T>(response: ApiResponse<T>): T {

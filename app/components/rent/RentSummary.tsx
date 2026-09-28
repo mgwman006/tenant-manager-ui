@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Flex, Form, Input, notification, Progress, Result, Row, Spin, Typography } from "antd";
+import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Flex, Form, Input, Modal, notification, Progress, Radio, Result, Row, Spin, Table, TableProps, Tag, Typography } from "antd";
 import { leaseApi } from "../../api/api";
-import { LeaseDetailsDTO, RentSummaryDTO } from "../../models/lease";
+import { LeaseDetailsDTO, PaymentBlockStatus, PaymentBlockSummaryDTO, RentSummaryDTO } from "../../models/lease";
 import { useAccount } from "../../store/account/AccountContext";
 import { getRentSummary, getLease } from "../../services/leaseService";
 import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined, RightOutlined, BellOutlined, WalletFilled, PayCircleOutlined, ScheduleOutlined, CreditCardOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { PaymentTransactionCreateDTO } from "../../models/payments";
+import { recordPayment } from "../../services/paymentService";
 
 
 const { Title, Text } = Typography;
@@ -20,6 +22,10 @@ export default function RentSummary() {
   const [notificationApi, contextHolder] = notification.useNotification();
   const { accountState } = useAccount();
   const [rentSummary,setRentSummary] = useState<RentSummaryDTO|null>();
+  const [isPaymentModalOpen,setIsPaymentModalOpen] = useState<boolean>(false);
+  const [paymetTransactionForm] = Form.useForm<PaymentTransactionCreateDTO>();
+  const [selectedPaymentBlockId,setSelectedPaymentBlockId] = useState<number>(0);
+  const [selectedAmount,setSelectedAmount] = useState<number>(0);
 
   const navigateToAuthFromLeaseDeatils = (nextApp: string = "tenant-manager") => {
     if (!authUrl) {
@@ -50,6 +56,28 @@ export default function RentSummary() {
     const rentPayment = await getRentSummary(Number(leaseId), jwtToken, notificationApi);
     setRentSummary(rentPayment);
   }
+
+  const openPaymentTransactionModal = (paymentBlockId:number, amount:number) =>{
+        setIsPaymentModalOpen(true);
+        setSelectedPaymentBlockId(paymentBlockId);
+        setSelectedAmount(amount);
+  }
+
+  const handleOnFinishPaymentForm = (values:PaymentTransactionCreateDTO) => {
+        const tenantId = lease?.tenant?.id;
+
+        if(!tenantId){
+            notificationApi.error({
+                description:`Tenant Id value is ${tenantId}`,
+                message:"Invalid Tenant Id"
+            });
+            return;
+        }
+        setLoading(true);
+        recordPayment(values,tenantId,accountState.accountDetails?.token ?? "",notificationApi);
+        setIsPaymentModalOpen(false);
+        setLoading(false);
+    }
   
   useEffect(() => {
     const loadLeaseDetails = async () => {
@@ -112,6 +140,55 @@ export default function RentSummary() {
   const progressPercent = rentSummary?.totalExpectedAmount??0 > 0 ? Math.min((rentSummary?.totalPaidAmount  / rentSummary?.totalExpectedAmount) * 100, 100) : 0;
 
 
+  const columns: TableProps<PaymentBlockSummaryDTO>["columns"] = [
+    {
+        title: "Start Date",
+        dataIndex: "startDate",
+        key: "startDate",
+    },
+    {
+        title: "End Date",
+        dataIndex: "endDate",
+        key: "endDate",
+    },
+    {
+        title: "Amount (TZS)",
+        dataIndex: "amount",
+        key: "amount",
+        render: (amount: number) =>
+            `${new Intl.NumberFormat("en-TZ").format(amount)}`,
+    },
+    {
+        title: "Paid Amount (TZS)",
+        dataIndex: "paidAmount",
+        key: "paidAmount",
+        render: (paidAmount: number) =>
+            `${new Intl.NumberFormat("en-TZ").format(paidAmount)}`,
+    },
+    {
+        title: "Outstanding Amount (TZS)",
+        dataIndex: "outstandingAmount",
+        key: "outstandingAmount",
+        render: (outstandingAmount: number) =>
+            `${new Intl.NumberFormat("en-TZ").format(outstandingAmount)}`,
+    },
+    {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        render: (status) => (
+            <Tag color={status === PaymentBlockStatus.UNPAID ? "red" : "green"} variant="solid">
+                {status}
+            </Tag>
+        ),
+    },
+    {
+        title: "Action",
+        render: (_, record) => (
+            <Button onClick={() => openPaymentTransactionModal(record.id,record.amount)} color="primary" variant="solid" disabled={record.status === PaymentBlockStatus.PAID}> <CreditCardOutlined/> Record Payment</Button>
+        ),
+    },
+];
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", padding: 24 }}>
       {contextHolder}
@@ -120,7 +197,7 @@ export default function RentSummary() {
 
       <Row>
         <Col span={24}>
-          <Card title="Rent Summary" style={{ maxWidth: 760 }}>
+          <Card title="Rent Summary" style={{ width:"100%" }}>
               <Descriptions
                 size="small"
                 column={1}
@@ -173,7 +250,7 @@ export default function RentSummary() {
             <Col span={24}>
               <Card 
                 title="Rent payment"
-                style={{ maxWidth: 760, width: "100%" }}>
+                style={{ width: "100%" }}>
 
                   <Alert
                     title={lease.fullLeasePaymentRequired
@@ -184,26 +261,101 @@ export default function RentSummary() {
                     style={{ marginBottom: 24, whiteSpace: "normal" }}
                   />
 
-                  <Form
-                    name="customized_form_controls"
-                    layout="vertical"
-                    //onFinish={onFinish}
-                    initialValues={{
-                     // amount: rentPaymentOutstanding.fullLeasePaymentRequired?rentPaymentOutstanding.outstandingAmount:rentPaymentOutstanding.rentAmount,
-                    }}
-                  >
-                    <Form.Item name="amount">
-                      <Input 
-                        suffix="TZS" 
-                      //  disabled={rentPaymentOutstanding.fullLeasePaymentRequired}
-                      />
-                    </Form.Item>
-                    <Form.Item>
-                      <Button type="primary" htmlType="submit">
-                        <CreditCardOutlined /> Pay Rent
-                      </Button>
-                    </Form.Item>
-                  </Form>
+                  <div style={{ overflowX: "auto", width: "100%", marginTop: 16 }}>
+                        <Table<PaymentBlockSummaryDTO>
+                            columns={columns}
+                            dataSource={rentSummary.paymentBlocks}
+                            rowKey="id"
+                            pagination={false}
+                            scroll={{ x: 640 }}
+                            size="small"
+                        />
+
+                        <Modal
+                            title="Record Payment"
+                            centered
+                            open={isPaymentModalOpen}
+                            onCancel={() => setIsPaymentModalOpen(false)}
+                            width={{
+                            xs: '90%',
+                            sm: '90%',
+                            md: '60%',
+                            lg: '50%',
+                            xl: '50%',
+                            xxl: '50%',
+                            }}
+                            footer={[null]}
+                        >
+                            <Form
+                                size="large"
+                                layout={'vertical'}
+                                form={paymetTransactionForm}
+                                initialValues={{ 
+                                    paymentBlockId: selectedPaymentBlockId,
+                                    method:"CASH",
+                                    currency:"TZS",
+                                    payerUserId:0,
+                                    amount:selectedAmount
+                                }}
+                                onFinish={handleOnFinishPaymentForm}
+                            >
+                                <Form.Item 
+                                    rules={[{ required: true }]}
+                                    label="Payment Block Id" 
+                                    name="paymentBlockId" 
+                                    hidden>
+                                    <Input />
+                                </Form.Item>
+                                
+                                <Form.Item 
+                                    rules={[{ required: true }]}
+                                    label="User" 
+                                    name="payerUserId" 
+                                    hidden>
+                                    <Input  />
+                                </Form.Item>
+
+                                <Form.Item         
+                                    rules={[{ required: true }]}
+                                    label="Amount" name="amount">
+                                    <Input disabled type={'number'} suffix="TZS" />
+                                </Form.Item>
+
+                                <Form.Item         
+                                    rules={[{ required: true }]}
+                                    label="Currency" name="currency" hidden>
+                                    <Input />
+                                </Form.Item>
+
+                                <Form.Item        
+                                    rules={[{ required: true }]}
+                                    label="Patment Method" name="method" >
+                                    <Radio.Group buttonStyle="solid" >
+                                    <Radio.Button value="CASH">Cash</Radio.Button>
+                                    <Radio.Button value="BANK_TRANSFER">Bank Transfer</Radio.Button>
+                                    <Radio.Button value="MOBILE_MONEY">Mobile Money</Radio.Button>
+                                    </Radio.Group>
+                                </Form.Item>
+
+                                <Form.Item      
+                                    hidden   
+                                    rules={[{ required: false }]}
+                                    label="Reference" name="reference">
+                                    <Input placeholder="input placeholder" />
+                                </Form.Item>
+
+                                <Form.Item label="Note (Optional)" name="note">
+                                    <Input placeholder="Enter payment description" />
+                                </Form.Item>
+
+                                
+                                <Form.Item>
+                                    <Button variant="solid" block type="primary" htmlType="submit" color="green" loading={loading}>Submit</Button>
+                                </Form.Item>
+                            </Form>
+                        </Modal>
+
+                    </div>
 
           
               </Card>
