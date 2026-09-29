@@ -108,7 +108,7 @@ export default function RentSummary() {
     };
 
     void loadLeaseDetails();
-  }, [leaseId, accountState.accountDetails?.token, notificationApi]);
+  }, []);
 
   if (loading) {
     return (
@@ -119,17 +119,7 @@ export default function RentSummary() {
     );
   }
 
-  if (!lease) {
-    return (
-      <div style={{ minHeight: "100vh", padding: 24, display: "grid", placeItems: "center" }}>
-        {contextHolder}
-        <Card style={{ maxWidth: 720, width: "100%" }}>
-          <Title level={3}>Lease details unavailable</Title>
-          <Text>We could not load the accepted lease information.</Text>
-        </Card>
-      </div>
-    );
-  }
+  
 
   if(!rentSummary)
   {
@@ -253,10 +243,10 @@ export default function RentSummary() {
                 style={{ width: "100%" }}>
 
                   <Alert
-                    title={lease.fullLeasePaymentRequired
+                    title={lease?.fullLeasePaymentRequired
                       ? "Your landlord is requesting full payment for this lease"
                       : "Month-to-month payment is allowed for this lease"}
-                    type={lease.fullLeasePaymentRequired ? "warning" : "success"}
+                    type={lease?.fullLeasePaymentRequired ? "warning" : "success"}
                     showIcon
                     style={{ marginBottom: 24, whiteSpace: "normal" }}
                   />

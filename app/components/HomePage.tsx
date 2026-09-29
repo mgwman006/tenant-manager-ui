@@ -11,14 +11,14 @@ import Invitations from "./invitation/Invitations";
 import { createLease } from "../services/leaseService";
 import { getActiveInvitations } from "../services/invitationService";
 import { useTenant } from "../store/tenant/TenantContext";
+import { isTokenExpired, navigateToAuth } from "../services/authService";
 
 const {Meta} = Card;
 
 
 const { Title, Text } = Typography;
 
-const authUrl = import.meta.env.VITE_AUTH_URL?.trim();
-const tenantManagerUrl = import.meta.env.VITE_TENANT_MANAGER_URL?.trim();
+
 
 export default function HomePage() {
     const navigate = useNavigate();
@@ -37,50 +37,7 @@ export default function HomePage() {
     const { tenantState, dispatchTenantState } = useTenant();
 
 
-    
-
-    function isTokenExpired(token?: string): boolean 
-    {
-        if (!token) 
-        {
-            return true;
-        }
-
-        try {
-            const parts = token.split(".");
-            if (parts.length < 2) {return true;}
-
-            const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-            const exp = payload?.exp;
-
-            if (typeof exp !== "number") {
-                return true;
-            }
-
-            return Date.now() >= exp * 1000;
-        } catch (error) {
-            return true;
-        }
-    }
-
-    const navigateToAuth = (nextApp: string = "tenant-manager", phone?: string) => {
-        if (!authUrl) {
-            notificationApi.error({
-            message: "Error while reading url",
-            description: "VITE_AUTH_URL is not configured.",
-            });
-            return;
-        }
-
-        const outGoingUrlValue = nextApp === "tenant-manager" ? tenantManagerUrl : null;
-        if (!outGoingUrlValue) {
-            console.error("Unable to resolve outgoing URL for auth redirect.");
-            return;
-        }
-
-        const url = `${authUrl}?outGoingUrl=${encodeURIComponent(outGoingUrlValue)}&phoneNumber=${encodeURIComponent("")}`;
-        window.location.href = url;
-    };
+     
 
     const loadTenant = async (userId:number, jwtToken:string) =>
     {
@@ -103,7 +60,7 @@ export default function HomePage() {
                 message: "Authentication Required",
                 description: "Please sign in again to create a lease.",
             });
-            navigateToAuth("tenant-manager",tenant?.phoneNumber)
+            navigateToAuth("tenant-manager",notificationApi,accountState.accountDetails?.phoneNumber);
             return;
         }
         const newLease: LeaseCreateDTO = {
@@ -128,7 +85,7 @@ export default function HomePage() {
         }
 
         if (!accountStateString) {
-            navigateToAuth();
+            navigateToAuth("tenant-manager",notificationApi,accountState.accountDetails?.phoneNumber);
             return;
         }
 
@@ -136,7 +93,7 @@ export default function HomePage() {
             const receivedAccountState: AccountState = JSON.parse(accountStateString);
             const details = receivedAccountState.accountDetails;
             if (!details) {
-                navigateToAuth();
+                navigateToAuth("tenant-manager",notificationApi,accountState.accountDetails?.phoneNumber);
                 return;
             }
 
@@ -146,7 +103,8 @@ export default function HomePage() {
                 description: "Your sign-in session has expired. Please sign in again.",
                 });
                 dispatchAccountState({ type: "LOGOUT" });
-                navigateToAuth();
+                navigateToAuth("tenant-manager",notificationApi,accountState.accountDetails?.phoneNumber);
+
                 return;
             }
 
