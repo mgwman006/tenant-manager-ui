@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAccount } from "../store/account/AccountContext";
 import { AccountState, TenantDetailsDTO } from "../models/user";
 import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined, RightOutlined, BellOutlined, WalletFilled, PayCircleOutlined, ScheduleOutlined, CreditCardOutlined } from "@ant-design/icons";
-import { LeaseCreateDTO, LeaseDetailsDTO, LeaseInvitationDetailsDTO } from "../models/lease";
+import { LeaseCreateDTO, LeaseDetailsDTO, LeaseInvitationDetailsDTO, LeaseStatus } from "../models/lease";
 import { tenantApi } from "../api/api";
 import Leases from "./lease/Leases";
 import Invitations from "./invitation/Invitations";
@@ -398,19 +398,17 @@ export default function HomePage() {
                             {
                                 key: '1',
                                 label: 'Active Leases',
-                                children: <Leases tenantId={tenant?.id ?? 0} jwtToken={accountState.accountDetails?.token} />,
+                                children: <Leases tenantId={tenant?.id ?? 0} jwtToken={accountState.accountDetails?.token} status={LeaseStatus.ACTIVE} />,
                             },
                             {
-                                disabled:true,
                                 key: '2',
-                                label: 'Pending Leases',
-                                // children: <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />,
+                                label: 'Pending Landlord Approval',
+                                children: <Leases tenantId={tenant?.id ?? 0} jwtToken={accountState.accountDetails?.token} status={LeaseStatus.PENDING_LANDLORD_APPROVAL} />,
                             },
                             {
-                                disabled:true,
                                 key: '3',
-                                label: 'Expired Leases',
-                                // children: <Invitations phoneNumber={tenant.phoneNumber} jwtToken={accountState.accountDetails?.token} />,
+                                label: 'Ended',
+                                children: <Leases tenantId={tenant?.id ?? 0} jwtToken={accountState.accountDetails?.token} status={LeaseStatus.ENDED} />,
                             }
                         ]}
                     />

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ApiResponse } from "../models/common";
 import { ApiError } from "../models/error";
-import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO,LeaseInvitationDetailsDTO } from "../models/lease";
+import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO,LeaseInvitationDetailsDTO, LeaseStatus } from "../models/lease";
 import { TenantDetailsDTO } from "../models/user";
 import { PaymentTransactionCreateDTO } from "../models/payments";
 
@@ -99,6 +99,18 @@ export const invitationApi = {
 };
 
 export const leaseApi = {
+  getLeasesByTenantAndStatus: async (tenantId: number,status:LeaseStatus, token: string) => {
+    const res = await apiClient.get<ApiResponse<LeaseDetailsDTO[]>>(
+      `/leases/tenant/${tenantId}?status=${status}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    return handleResponse(res.data);
+  },
     getActiveLeasesByTenantId: async (tenantId : number, token :string) => {
         const result = await apiClient.get<ApiResponse<LeaseDetailsDTO[]>>(`/leases/tenant/${tenantId}`,{
             headers: {

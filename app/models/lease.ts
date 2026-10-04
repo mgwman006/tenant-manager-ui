@@ -18,8 +18,8 @@ export enum RentFrequency {
 export enum LeaseStatus {
   ACTIVE = "ACTIVE",
   ENDED = "ENDED",
-  TERMINATED = "TERMINATED",
   PENDING = "PENDING",
+  PENDING_LANDLORD_APPROVAL = "PENDING_LANDLORD_APPROVAL"
 }
 
 export enum RentPaymentStatus

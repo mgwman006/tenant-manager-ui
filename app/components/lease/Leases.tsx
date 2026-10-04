@@ -7,7 +7,7 @@ import { useNavigate } from "react-router";
 
 const { Meta } = Card;
 
-export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtToken: string | undefined }) {
+export default function Leases({ tenantId, jwtToken, status }: { tenantId: number; jwtToken: string | undefined; status : LeaseStatus}) {
     const navigate = useNavigate();
     const [leases, setLeases] = useState<LeaseDetailsDTO[]>([]);
     const [loading, setLoading] = useState(false);
@@ -15,7 +15,7 @@ export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtTo
     const loadLeases = async () => {
         setLoading(true);
         try {
-            const res = await leaseApi.getActiveLeasesByTenantId(tenantId, jwtToken ?? "");
+            const res = await leaseApi.getLeasesByTenantAndStatus(tenantId,status, jwtToken ?? "");
             setLeases(res);
         } finally {
             setLoading(false);
@@ -38,7 +38,7 @@ export default function Leases({ tenantId, jwtToken }: { tenantId: number; jwtTo
         <div>
             {leases.length === 0 ? (
                 <div style={{ padding: "24px 0", textAlign: "center", color: "#666" }}>
-                    <Empty description="No active leases found."/>
+                    <Empty description="No leases found."/>
                 </div>
             ) : (
                 <Listy<LeaseDetailsDTO>
