@@ -1,34 +1,33 @@
 import { useEffect, useState } from "react";
-import { Card, Listy, Spin, Avatar, Tag, Empty, Flex, Button, Row, Col } from "antd";
+import { Card, Listy, Spin, Avatar, Tag, Empty, Flex, Button, Row, Col, notification } from "antd";
 import { CreditCardOutlined, MoreOutlined, ProfileOutlined } from "@ant-design/icons";
 import { LeaseDetailsDTO, LeaseStatus } from "../../models/lease";
-import { leaseApi } from "../../api/api";
+import { getLeasesByTenantAndStatus } from "../../services/leaseService";
 import { useNavigate } from "react-router";
 
 const { Meta } = Card;
 
 export default function Leases({ tenantId, jwtToken, status }: { tenantId: number; jwtToken: string | undefined; status : LeaseStatus}) {
     const navigate = useNavigate();
+    const [notificationApi, contextHolder] = notification.useNotification();
     const [leases, setLeases] = useState<LeaseDetailsDTO[]>([]);
     const [loading, setLoading] = useState(false);
 
     const loadLeases = async () => {
         setLoading(true);
-        try {
-            const res = await leaseApi.getLeasesByTenantAndStatus(tenantId,status, jwtToken ?? "");
-            setLeases(res);
-        } finally {
-            setLoading(false);
-        }
+        const res = await getLeasesByTenantAndStatus(tenantId, status, jwtToken ?? "", notificationApi);
+        setLeases(res);
+        setLoading(false);
     };
 
     useEffect(() => {
         void loadLeases();
-    }, [tenantId, jwtToken]);
+    }, [tenantId, jwtToken, status]);
 
     if (loading) {
         return (
             <div style={{ minHeight: "120px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {contextHolder}
                 <Spin size="large" tip="Loading leases..." />
             </div>
         );
@@ -36,6 +35,7 @@ export default function Leases({ tenantId, jwtToken, status }: { tenantId: numbe
 
     return (
         <div>
+            {contextHolder}
             {leases.length === 0 ? (
                 <div style={{ padding: "24px 0", textAlign: "center", color: "#666" }}>
                     <Empty description="No leases found."/>

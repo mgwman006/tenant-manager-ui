@@ -1,8 +1,7 @@
 import { NotificationInstance } from "antd/es/notification/interface";
 import { leaseApi, invitationApi } from "../api/api";
-import { LeaseCreateDTO, LeaseDetailsDTO } from "../models/lease";
+import { LeaseCreateDTO, LeaseDetailsDTO, LeaseInvitationDetailsDTO } from "../models/lease";
 import { ApiError } from "../models/error";
-import { TenantInvitationDetailsDTO } from "../models/user";
 
 
 
@@ -28,10 +27,8 @@ export const createLease = async (leaseDTO:LeaseCreateDTO, jwtToken:string, noti
     }
 }
 
- export const getActiveInvitations = async (phoneNumber:string, jwtToken:string,notificationApi:NotificationInstance): Promise<TenantInvitationDetailsDTO[]> => {
-    if (!phoneNumber || !jwtToken) {
-      return [];
-    }
+ export const getActiveInvitations = async (phoneNumber:string, jwtToken:string,notificationApi:NotificationInstance): Promise<LeaseInvitationDetailsDTO[]> => {
+    
 
     try {
       return invitationApi.getActiveInvitationsByPhoneNumber(phoneNumber, jwtToken);

@@ -19,10 +19,11 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response) {
       const { message, data, statusCode } = error.response.data;
+
       return Promise.reject(
         new ApiError({
           message: message ?? "SERVER_ERROR",
-          details: data ?? null,
+          data: data ?? null,
           statusCode: statusCode ?? error.response.status,
         })
       );
@@ -32,7 +33,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(
         new ApiError({
           message: "NETWORK_ERROR",
-          details: "No response from server",
+          data: "No response from server",
           statusCode: 0,
         })
       );
@@ -41,7 +42,7 @@ apiClient.interceptors.response.use(
     return Promise.reject(
       new ApiError({
         message: "CLIENT_ERROR",
-        details: "Unexpected error occurred",
+        data: "Unexpected error occurred",
         statusCode: 0,
       })
     );

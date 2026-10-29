@@ -26,21 +26,20 @@ export function isTokenExpired(token?: string): boolean
         }
     }
 
-export const navigateToAuth = (nextApp: string = "tenant-manager",notificationApi:NotificationInstance, phone?: string) => {
-        if (!authUrl) {
-            notificationApi.error({
-            message: "Error while reading url",
-            description: "VITE_AUTH_URL is not configured.",
-            });
-            return;
-        }
 
-        const outGoingUrlValue = nextApp === "tenant-manager" ? tenantManagerUrl : null;
-        if (!outGoingUrlValue) {
-            console.error("Unable to resolve outgoing URL for auth redirect.");
-            return;
-        }
 
-        const url = `${authUrl}?outGoingUrl=${encodeURIComponent(outGoingUrlValue)}&phoneNumber=${encodeURIComponent("")}`;
-        window.location.href = url;
-    };
+export const navigateToAuth = (nextApp: string = "tenant-manager", phone?: string): void => {
+  if (!authUrl) {
+    console.error("VITE_AUTH_URL is not configured.");
+    return;
+  }
+
+  const outGoingUrlValue = nextApp === "tenant-manager" ? tenantManagerUrl : null;
+  if (!outGoingUrlValue) {
+    console.error("Unable to resolve outgoing URL for auth redirect.");
+    return;
+  }
+
+  const url = `${authUrl}?outGoingUrl=${encodeURIComponent(outGoingUrlValue)}&phoneNumber=${encodeURIComponent(phone ?? "")}`;
+  window.location.href = url;
+};

@@ -1,6 +1,6 @@
 export type ApiErrorData = {
-  message: string;
-  details: string | Record<string, string> | null;
+  message: string;       // error type e.g. "VALIDATION_FAILED", "UNAUTHORIZED"
+  data: string | Record<string, string> | null;  // detailed error e.g. "Invalid phone number" or { field: "message" }
   statusCode: number;
 };
 
@@ -12,7 +12,7 @@ export class ApiError extends Error {
     super(values.message);
     this.name = "ApiError";
     this.statusCode = values.statusCode;
-    this.details = values.details;
+    this.details = values.data;
   }
 
   toJSON() {

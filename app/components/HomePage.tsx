@@ -5,19 +5,15 @@ import { useAccount } from "../store/account/AccountContext";
 import { AccountState, TenantDetailsDTO } from "../models/user";
 import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined, RightOutlined, BellOutlined, WalletFilled, PayCircleOutlined, ScheduleOutlined, CreditCardOutlined } from "@ant-design/icons";
 import { LeaseCreateDTO, LeaseDetailsDTO, LeaseInvitationDetailsDTO, LeaseStatus } from "../models/lease";
-import { tenantApi } from "../api/api";
 import Leases from "./lease/Leases";
 import Invitations from "./invitation/Invitations";
 import { createLease } from "../services/leaseService";
 import { getActiveInvitations } from "../services/invitationService";
 import { useTenant } from "../store/tenant/TenantContext";
 import { isTokenExpired, navigateToAuth } from "../services/authService";
+import { getTenantByUserId } from "../services/tenantService";
 
 const {Meta} = Card;
-
-
-const { Title, Text } = Typography;
-
 
 
 export default function HomePage() {
@@ -42,25 +38,18 @@ export default function HomePage() {
     const loadTenant = async (userId:number, jwtToken:string) =>
     {
         setLoading(true);
-        try {
-            const tenantResponse = await tenantApi.getByUserId(userId,jwtToken);
-            setTenant(tenantResponse);
-            dispatchTenantState({ type: "FETCH_SUCCESS", payload: tenantResponse });
-        } finally {
-            setLoading(false);
-        }
+        const tenantResponse = await getTenantByUserId(userId, jwtToken, notificationApi);
+        setTenant(tenantResponse);
+        dispatchTenantState({ type: "FETCH_SUCCESS", payload: tenantResponse });
+        setLoading(false);
     }
 
     const handleCreateLease = async (values: LeaseCreateDTO) => 
     {
         const tenantId = tenant?.id;
         const token = accountState.accountDetails?.token;
-        if (!token || !tenantApi) {
-            notificationApi.error({
-                message: "Authentication Required",
-                description: "Please sign in again to create a lease.",
-            });
-            navigateToAuth("tenant-manager",notificationApi,accountState.accountDetails?.phoneNumber);
+        if (!token) {
+            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
             return;
         }
         const newLease: LeaseCreateDTO = {
@@ -85,48 +74,46 @@ export default function HomePage() {
         }
 
         if (!accountStateString) {
-            navigateToAuth("tenant-manager",notificationApi,accountState.accountDetails?.phoneNumber);
+            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
+            return;
+        }
+       
+        const receivedAccountState: AccountState = JSON.parse(accountStateString);
+        const details = receivedAccountState.accountDetails;
+        if (!details) {
+            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
             return;
         }
 
-        try {
-            const receivedAccountState: AccountState = JSON.parse(accountStateString);
-            const details = receivedAccountState.accountDetails;
-            if (!details) {
-                navigateToAuth("tenant-manager",notificationApi,accountState.accountDetails?.phoneNumber);
-                return;
-            }
+        if (isTokenExpired(details.token)) {
+            notificationApi.error({
+            message: "Session expired",
+            description: "Your sign-in session has expired. Please sign in again.",
+            });
+            dispatchAccountState({ type: "LOGOUT" });
+            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
 
-            if (isTokenExpired(details.token)) {
-                notificationApi.error({
-                message: "Session expired",
-                description: "Your sign-in session has expired. Please sign in again.",
-                });
-                dispatchAccountState({ type: "LOGOUT" });
-                navigateToAuth("tenant-manager",notificationApi,accountState.accountDetails?.phoneNumber);
-
-                return;
-            }
-
-            if (!accountState.accountDetails || accountState.accountDetails.token !== details.token) {
-                dispatchAccountState({ type: "FETCH_SUCCESS", payload: details });
-            }
-
-            loadTenant(details.userDetails.id,details.token);
-        
-        } catch (error) {
-            console.error("Failed to parse account state from URL", error);
+            return;
         }
+
+        if (!accountState.accountDetails || accountState.accountDetails.token !== details.token) {
+            dispatchAccountState({ type: "FETCH_SUCCESS", payload: details });
+        }
+
+        loadTenant(details.userDetails.id,details.token);
+        
     }, []);
 
     useEffect(() => {
     const token = accountState.accountDetails?.token;
+    const phoneNumber = accountState.accountDetails?.userDetails.phoneNumber;
 
-    if (!tenant?.phoneNumber || !token) {
+    if (!phoneNumber || !token) {
+        navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
         return;
     }
 
-    loadInvitations(tenant.phoneNumber, token);
+    loadInvitations(phoneNumber, token);
 }, [tenant?.phoneNumber, accountState.accountDetails?.token]);
 
     const summaryCards = [
@@ -179,12 +166,6 @@ export default function HomePage() {
                 <Spin size="large" tip="Loading your account..." />
             </div>
         );
-    }
-
-    if(!tenant){
-        notificationApi.error({
-            description:`Tenant is not valid, recorded value is ${JSON.stringify(tenant)}`
-        });
     }
 
   return (
@@ -382,7 +363,7 @@ export default function HomePage() {
                     xxl: '50%',
                 }}
             >
-                <Invitations phoneNumber={tenant?.phoneNumber ?? ""} jwtToken={accountState.accountDetails?.token} />
+                <Invitations phoneNumber={accountState.accountDetails?.userDetails.phoneNumber ?? ""} jwtToken={accountState.accountDetails?.token} />
             </Modal>
       
             <Row 

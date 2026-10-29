@@ -2,6 +2,8 @@ import { NotificationInstance } from "antd/es/notification/interface";
 import { leaseApi } from "../api/api";
 import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO } from "../models/lease";
 import { ApiError } from "../models/error";
+import { LeaseStatus } from "../models/lease";
+import { handleApiError } from "../utilities/error-handler";
 
 
 
@@ -59,6 +61,20 @@ export const getLease = async (leaseId: number, jwtToken:string, notificationApi
                 : "The lease details could not be loaded.",
         });
         return null;
+    }
+};
+
+export const getLeasesByTenantAndStatus = async (
+    tenantId: number,
+    status: LeaseStatus,
+    jwtToken: string,
+    notificationApi: NotificationInstance,
+): Promise<LeaseDetailsDTO[]> => {
+    try {
+        return await leaseApi.getLeasesByTenantAndStatus(tenantId, status, jwtToken);
+    } catch (error: unknown) {
+        handleApiError(error, notificationApi);
+        return [];
     }
 };
 
