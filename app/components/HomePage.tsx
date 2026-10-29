@@ -1,0 +1,400 @@
+import React, { useEffect, useState } from "react";
+import { Card, Typography, Button, notification, Result, Avatar, Tabs, Spin, Row, Col, Alert, Flex, Modal, Form, InputNumber, Input, Select, Radio, Badge } from "antd";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAccount } from "../store/account/AccountContext";
+import { AccountState, TenantDetailsDTO } from "../models/user";
+import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined, RightOutlined, BellOutlined, WalletFilled, PayCircleOutlined, ScheduleOutlined, CreditCardOutlined } from "@ant-design/icons";
+import { LeaseCreateDTO, LeaseDetailsDTO, LeaseInvitationDetailsDTO, LeaseStatus } from "../models/lease";
+import Leases from "./lease/Leases";
+import Invitations from "./invitation/Invitations";
+import { createLease } from "../services/leaseService";
+import { getActiveInvitations } from "../services/invitationService";
+import { useTenant } from "../store/tenant/TenantContext";
+import { isTokenExpired, navigateToAuth } from "../services/authService";
+import { getTenantByUserId } from "../services/tenantService";
+
+const {Meta} = Card;
+
+
+export default function HomePage() {
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    let accountStateString = searchParams.get("state");
+    const [notificationApi, contextHolder] = notification.useNotification();
+    const { accountState, dispatchAccountState } = useAccount();
+    const [tenant, setTenant] = useState<TenantDetailsDTO|null>(null);
+    const [loading, setLoading] = useState(false);
+    const [isLeaseModalOpen, setIsLeaseModalOpen] = useState(false);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [leaseForm] = Form.useForm<LeaseCreateDTO>();
+    const [invitesCount,setInvitesCount] = useState<number>(0);
+    const [activeLeaseAmountDue,setActiveLeaseAmountDue] = useState<number>(0);
+    const [invitations, setInvitations] = useState<LeaseInvitationDetailsDTO[]>([]);
+    const { tenantState, dispatchTenantState } = useTenant();
+
+
+     
+
+    const loadTenant = async (userId:number, jwtToken:string) =>
+    {
+        setLoading(true);
+        const tenantResponse = await getTenantByUserId(userId, jwtToken, notificationApi);
+        setTenant(tenantResponse);
+        dispatchTenantState({ type: "FETCH_SUCCESS", payload: tenantResponse });
+        setLoading(false);
+    }
+
+    const handleCreateLease = async (values: LeaseCreateDTO) => 
+    {
+        const tenantId = tenant?.id;
+        const token = accountState.accountDetails?.token;
+        if (!token) {
+            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
+            return;
+        }
+        const newLease: LeaseCreateDTO = {
+            ...values,
+            tenantId: tenantId??0,
+        };
+
+        const response = await createLease(newLease, token,notificationApi);
+        setIsLeaseModalOpen(false);
+    };
+
+    const loadInvitations = async (phoneNumber:string,token : string) =>
+    {
+        const invites = await getActiveInvitations(phoneNumber,token,notificationApi);
+        setInvitesCount(invites.length)
+        setInvitations(invites);
+    }
+
+    useEffect(() => {
+        if(!accountStateString){
+            accountStateString = JSON.stringify(accountState);
+        }
+
+        if (!accountStateString) {
+            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
+            return;
+        }
+       
+        const receivedAccountState: AccountState = JSON.parse(accountStateString);
+        const details = receivedAccountState.accountDetails;
+        if (!details) {
+            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
+            return;
+        }
+
+        if (isTokenExpired(details.token)) {
+            notificationApi.error({
+            message: "Session expired",
+            description: "Your sign-in session has expired. Please sign in again.",
+            });
+            dispatchAccountState({ type: "LOGOUT" });
+            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
+
+            return;
+        }
+
+        if (!accountState.accountDetails || accountState.accountDetails.token !== details.token) {
+            dispatchAccountState({ type: "FETCH_SUCCESS", payload: details });
+        }
+
+        loadTenant(details.userDetails.id,details.token);
+        
+    }, []);
+
+    useEffect(() => {
+    const token = accountState.accountDetails?.token;
+    const phoneNumber = accountState.accountDetails?.userDetails.phoneNumber;
+
+    if (!phoneNumber || !token) {
+        navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
+        return;
+    }
+
+    loadInvitations(phoneNumber, token);
+}, [tenant?.phoneNumber, accountState.accountDetails?.token]);
+
+    const summaryCards = [
+        {
+            title: "Initiate Lease",
+            value: "Invite your landlord to start agreement",
+            icon: <PlusOutlined />,
+            color: "#FAFFFA",
+            buttonStyle: { backgroundColor: "#52c41a", borderColor: "#52c41a", color: "#fff" },
+            buttonText: "Create Lease",
+            buttonIcon: <PlusOutlined />,
+            onClick: () => navigate('leases/create'),
+        },
+         {
+            title: "Invitations",
+            value: `You have ${invitesCount} invitaions to respond`,
+            icon: <Badge count={invitesCount}><BellOutlined /></Badge>,    
+            color: "#EDF4FF",
+            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
+            buttonText: "View more",
+            buttonIcon: <ArrowRightOutlined />,
+            onClick: () => setIsInviteModalOpen(true),
+        },
+        {
+            title: "Amount Due",
+            value: activeLeaseAmountDue,
+            icon: <ScheduleOutlined />,
+            color: "#FFFCFC",
+            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
+            buttonText: "Pay now",
+            buttonIcon: <PayCircleOutlined />,
+            onClick: () => {},
+        },
+        {
+            title: "Lease Fund",
+            value: invitesCount,
+            icon: <CreditCardOutlined />,
+            color: "#FFFFED",
+            buttonStyle: { backgroundColor: "info", borderColor: "#EDF4FF", color: "#fff" },
+            buttonText: "Load Fund",
+            buttonIcon: <ArrowRightOutlined />,
+            onClick: () => {},
+        }
+       
+    ];
+
+    if (loading) {
+        return (
+            <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Spin size="large" tip="Loading your account..." />
+            </div>
+        );
+    }
+
+  return (
+        <>
+            {contextHolder}
+            <Row style={{marginTop:24}}>
+                <Col span={24}>
+                    <Card variant="borderless">
+                        <Meta 
+                            title={`Good day, ${accountState.accountDetails?.userDetails.firstName}`}
+                            description={"Here is your rental overview. Stay on top of your rent and manage your lease"}
+                        />
+                    </Card>
+                </Col>
+            </Row>
+
+
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 , marginTop:24}}>
+                {summaryCards.map((card) => (
+                    <Col xs={24} sm={12} md={6} key={card.title}>
+                        <Card 
+                            onClick={card.onClick}
+                            hoverable 
+                            style={{ borderRadius: 16, border: "1px solid #eaf0f6", boxShadow: "none", backgroundColor:card.color }} 
+                        >
+                            <Flex
+                                justify="space-between"
+                            >
+
+                                <Meta 
+                                    avatar={<Avatar size={50} icon={card.icon}/>}
+                                    title={card.title}
+                                    description={card.value}
+                                />
+                                <RightOutlined />
+                            </Flex>
+                            
+                        </Card>
+                    </Col>
+                ))}
+            </Row>
+
+            <Modal
+                title="Initiate a lease"
+                open={isLeaseModalOpen}
+                onCancel={() => setIsLeaseModalOpen(false)}
+                footer={[
+                    <Button key="close" onClick={() => setIsLeaseModalOpen(false)}>
+                        Close
+                    </Button>,
+                ]}
+            >
+                <Form
+                    form={leaseForm}
+                    layout="vertical"
+                    onFinish={async (values) => {handleCreateLease(values);}}
+                >
+                    <Form.Item
+                        hidden={true}
+                        name="rentalProfileId"
+                        label="Rental Profile ID"
+                        rules={[{ required: false, message: "Please enter the rental profile ID" }]}
+                    >
+                        <InputNumber style={{ width: '100%' }} />
+                    </Form.Item>
+
+                    <Form.Item
+                        hidden={true}
+                        name="unitId"
+                        label="Unit ID"
+                        rules={[{ required: false, message: "Please enter the unit ID" }]}
+                    >
+                        <InputNumber style={{ width: '100%' }} />
+                    </Form.Item>
+
+                    <Form.Item
+                        hidden={true}
+                        name="tenantId"
+                        label="Tenant ID"
+                        rules={[{ required: false, message: "Please enter the tenant ID" }]}
+                    >
+                        <InputNumber style={{ width: '100%' }} />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="landlordFirstName"
+                        label="Landlord First Name"
+                        rules={[{ required: true, message: "Please enter the landlord's first name" }]}
+                    >
+                        <Input />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="landlordLastName"
+                        label="Landlord Last Name"
+                        rules={[{ required: true, message: "Please enter the landlord's last name" }]}
+                    >
+                        <Input />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="landlordPhoneNumber"
+                        label="Landlord Phone Number"
+                        rules={[{ required: true, message: "Please enter the landlord's phone number" }]}
+                    >
+                        <Input />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="startDate"
+                        label="Start Date"
+                        rules={[{ required: true, message: "Please enter the lease start date" }]}
+                    >
+                        <Input type="date"/>
+                    </Form.Item>
+
+                    <Form.Item
+                        name="endDate"
+                        label="End Date"
+                        rules={[{ required: true, message: "Please enter the lease end date" }]}
+                    >
+                        <Input type="date" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="rentAmount"
+                        label="Rent Amount"
+                        rules={[{ required: true, message: "Please enter the rent amount" }]}
+                    >
+                        <InputNumber style={{ width: '100%' }} />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="currency"
+                        label="Currency"
+                        rules={[{ required: true, message: "Please enter the currency" }]}
+                    >
+                        <Select
+                        options={[
+                            { value: "TZS", label: "TZS" },
+                            // { value: "USD", label: "USD" },
+                            // { value: "EUR", label: "EUR" },
+                            // Add more currencies as needed
+                        ]}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="rentFrequency"
+                        label="Rent Frequency"
+                        rules={[{ required: true, message: "Please select the rent period" }]}
+                    >
+                        <Select
+                        options={[
+                            { value: "DAILY", label: "Daily" },
+                            { value: "WEEKLY", label: "Weekly" },
+                            { value: "MONTHLY", label: "Monthly" },
+                            { value: "YEARLY", label: "Yearly" },
+                        ]}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        hidden={true}
+                        name="fullLeasePaymentRequired"
+                        label="Do you need full payment"
+                        initialValue={false}
+                        rules={[{ required: true, message: "Please select whether full payment is required" }]}
+                    >
+                        <Radio.Group buttonStyle="solid">
+                            <Radio.Button value={true}>Yes</Radio.Button>
+                            <Radio.Button value={false}>No</Radio.Button>
+                        </Radio.Group>
+                    </Form.Item>
+
+                    <Form.Item>
+                        <Button type="primary" htmlType="submit">
+                            Create Lease <RightOutlined />
+                        </Button>
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            <Modal
+                title="Invitations"
+                open={isInviteModalOpen}
+                onCancel={() => setIsInviteModalOpen(false)}
+                footer={null}
+                width={{
+                    xs: '100%',
+                    sm: '90%',
+                    md: '80%',
+                    lg: '50%',
+                    xl: '50%',
+                    xxl: '50%',
+                }}
+            >
+                <Invitations phoneNumber={accountState.accountDetails?.userDetails.phoneNumber ?? ""} jwtToken={accountState.accountDetails?.token} />
+            </Modal>
+      
+            <Row 
+                // justify={"center"}
+                //  align="middle"
+            >
+
+                <Col xs ={24} sm={24} md={24} lg={24}>
+                    <Tabs
+                        defaultActiveKey="1"
+                        centered
+                        items={[
+                            {
+                                key: '1',
+                                label: 'Active Leases',
+                                children: <Leases tenantId={tenant?.id ?? 0} jwtToken={accountState.accountDetails?.token} status={LeaseStatus.ACTIVE} />,
+                            },
+                            {
+                                key: '2',
+                                label: 'Pending Landlord Approval',
+                                children: <Leases tenantId={tenant?.id ?? 0} jwtToken={accountState.accountDetails?.token} status={LeaseStatus.PENDING_LANDLORD_APPROVAL} />,
+                            },
+                            {
+                                key: '3',
+                                label: 'Ended',
+                                children: <Leases tenantId={tenant?.id ?? 0} jwtToken={accountState.accountDetails?.token} status={LeaseStatus.ENDED} />,
+                            }
+                        ]}
+                    />
+                </Col>
+            </Row>
+        </>
+  );
+}
