@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Descriptions, notification, Result, Spin, Tag, Typography } from "antd";
-import { leaseApi, tenantInvitationApi } from "../api/api";
-import { AccountState, TenantInvitationDetailsDTO } from "../models/user";
-import { useAccount } from "../store/account/AccountContext";
-import { LeaseDetailsDTO } from "../models/lease";
+import { leaseApi, invitationApi } from "../../api/api";
+import { AccountState } from "../../models/user";
+import { useAccount } from "../../store/account/AccountContext";
+import { LeaseDetailsDTO, LeaseInvitationDetailsDTO } from "../../models/lease";
 
 const { Title, Text } = Typography;
 
@@ -14,7 +14,7 @@ const tenantManagerUrl = import.meta.env.VITE_TENANT_MANAGER_URL?.trim();
 export default function InvitationDetails() {
   const { invitationToken } = useParams();
   const navigate = useNavigate();
-  const [invitation, setInvitation] = useState<TenantInvitationDetailsDTO | null>(null);
+  const [invitation, setInvitation] = useState<LeaseInvitationDetailsDTO | null>(null);
   const [lease,setLease] = useState<LeaseDetailsDTO | null> (null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
@@ -89,7 +89,7 @@ function isTokenExpired(token?: string): boolean
 
 
     try {
-      const data = await tenantInvitationApi.getByInvitationToken(invitationToken,jwtToken);
+      const data = await invitationApi.getByInvitationToken(invitationToken,jwtToken);
       setInvitation(data);
 
       if(data.leaseId)
@@ -100,7 +100,7 @@ function isTokenExpired(token?: string): boolean
     } catch (error: any) {
       notificationApi.error({
         message: error.message ?? "Unable to load invitation",
-        description: error.data ?? "The invitation could not be loaded.",
+        description: error.details ?? "The invitation could not be loaded.",
       });
     } finally {
       setLoading(false);
@@ -152,7 +152,7 @@ function isTokenExpired(token?: string): boolean
 
     setAccepting(true);
     try {
-      await tenantInvitationApi.acceptInvitation(invitationToken, userId, jwtToken);
+      await invitationApi.acceptInvitation(invitationToken, userId, jwtToken);
       notificationApi.success({
         message: "Invitation accepted",
         description: "Your lease details are now available.",
@@ -198,17 +198,14 @@ function isTokenExpired(token?: string): boolean
     <div style={{ minHeight: "100vh", background: "#f8fafc", padding: 24, display: "grid", placeItems: "center" }}>
       {contextHolder}
       <Card 
-        title="Lease Terms"
+        title="Invitation Details"
         style={{ maxWidth: 760, width: "100%" }}
         >
         <Descriptions column={1} bordered style={{ marginTop: 20 }}>
           <Descriptions.Item label="Start Date">{lease?.startDate}</Descriptions.Item>
           <Descriptions.Item label="End Date">{lease?.endDate}</Descriptions.Item>
-          <Descriptions.Item label="Rental Amount">{lease?.rentAmount} {lease?.currency}</Descriptions.Item>
-          <Descriptions.Item label="Rental Period">{lease?.rentPeriod}</Descriptions.Item>
-          <Descriptions.Item label="Total Amount">{lease?.paymentAmount}</Descriptions.Item>
-          <Descriptions.Item label="Amount Paid">{lease?.amountPaid}</Descriptions.Item>
-          <Descriptions.Item label="Ballance">{lease?.balance}</Descriptions.Item>
+          <Descriptions.Item label="Rental Amount">{lease?.rent.amount} {lease?.rent.currency}</Descriptions.Item>
+          <Descriptions.Item label="Rental Period">{lease?.rent.frequency}</Descriptions.Item>
           <Descriptions.Item label="Status">
             <Tag color={invitation.status === "PENDING" ? "gold" : "green"}>{invitation.status}</Tag>
           </Descriptions.Item>

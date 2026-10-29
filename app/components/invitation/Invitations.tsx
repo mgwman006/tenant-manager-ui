@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
-import { List, Spin } from "antd";
-import { tenantInvitationApi } from "../../api/api";
-import { TenantInvitationDetailsDTO } from "../../models/user";
+import { Avatar, Card, Empty, Listy, Spin, Tag } from "antd";
+import { MailOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router";
+import { invitationApi } from "../../api/api";
+import { LeaseInvitationDetailsDTO } from "../../models/lease";
+
+const { Meta } = Card;
 
 export default function Invitations({
   phoneNumber,
@@ -10,7 +14,8 @@ export default function Invitations({
   phoneNumber: string;
   jwtToken: string | undefined;
 }) {
-  const [invitations, setInvitations] = useState<TenantInvitationDetailsDTO[]>([]);
+  const navigate = useNavigate();
+  const [invitations, setInvitations] = useState<LeaseInvitationDetailsDTO[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadInvitations = async () => {
@@ -21,7 +26,7 @@ export default function Invitations({
 
     setLoading(true);
     try {
-      const res = await tenantInvitationApi.getActiveInvitationsByPhoneNumber(phoneNumber, jwtToken);
+      const res = await invitationApi.getActiveInvitationsByPhoneNumber(phoneNumber, jwtToken);
       setInvitations(Array.isArray(res) ? res : []);
     } catch (error) {
       console.error("Failed to load invitations", error);
@@ -36,22 +41,59 @@ export default function Invitations({
   }, [phoneNumber, jwtToken]);
 
   if (loading && invitations.length === 0) {
-    return <Spin />;
+    return (
+      <div style={{ minHeight: "120px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Spin size="large" tip="Loading invitations..." />
+      </div>
+    );
   }
 
   return (
-    <List
-      loading={loading}
-      dataSource={invitations}
-      locale={{ emptyText: "No invitations found" }}
-      renderItem={(item: TenantInvitationDetailsDTO) => (
-        <List.Item>
-          <div>
-            <strong>{item.phoneNumber}</strong>
-            <div>{item.status}</div>
-          </div>
-        </List.Item>
+    <div>
+      {invitations.length === 0 ? (
+        <div style={{ padding: "24px 0", textAlign: "center", color: "#666" }}>
+          
+            <Empty description="No invitations found."/>
+
+        </div>
+      ) : (
+        <Listy<LeaseInvitationDetailsDTO>
+          items={invitations}
+          rowKey="id"
+          itemRender={(item) => (
+            <Card
+              onClick={() => navigate(`/invitations/${item.invitationToken}`)}
+              style={{ cursor: "pointer" }}
+            >
+              <Meta
+                avatar={
+                  <Avatar
+                    size={52}
+                    style={{ backgroundColor: "#fff1f0", color: "#cf1322" }}
+                  >
+                    <MailOutlined style={{ fontSize: 28 }} />
+                  </Avatar>
+                }
+                title={
+                  item.status === "ACCEPTED" ? (
+                    <Tag color="success">Accepted</Tag>
+                  ) : item.status === "PENDING" ? (
+                    <Tag color="warning">Pending</Tag>
+                  ) : (
+                    <Tag color="error">{item.status}</Tag>
+                  )
+                }
+                description={
+                  <div>
+                    <div>Sent: {item.sentAt ?? "-"}</div>
+                    <div>Expires: {item.expiresAt ?? "-"}</div>
+                  </div>
+                }
+              />
+            </Card>
+          )}
+        />
       )}
-    />
+    </div>
   );
 }

@@ -1,27 +1,168 @@
-import { Typography,Layout, Image, Grid, Drawer, Button, Card, Row, Divider, Col, Space, Tag, Flex } from 'antd';
-import { MenuOutlined } from '@ant-design/icons';
-import { Outlet } from 'react-router-dom';
+// import { Typography,Layout, Image, Grid, Drawer, Button, Card, Row, Divider, Col, Space, Tag, Flex, Menu, Breadcrumb, Avatar } from 'antd';
+// import { HomeFilled, HomeOutlined, MenuOutlined } from '@ant-design/icons';
+// import { Outlet } from 'react-router-dom';
+// import { useState } from 'react';
+// import Sider from 'antd/es/layout/Sider';
+
+// const { Title, Text, Link } = Typography;
+
+// const { Header, Footer, Content } = Layout;
+// const { useBreakpoint } = Grid;
+
+// const navItems = [
+//   { 
+//     key: 'home', 
+//     label: <Link href='/'>
+//             <Avatar icon={<HomeFilled />} /> Home
+//           </Link>, 
+//     to: '/' 
+//   },
+// ];
+
+// export default function AppLayout() {
+//   const [drawerOpen, setDrawerOpen] = useState(false);
+//   const screens = useBreakpoint();
+//   const isMobile = !screens.md; // <768px = mobile
+
+//   return (
+//     <Layout>
+//       <Header 
+//           style={{
+//           position: 'sticky',
+//           top: 0,
+//           zIndex: 100,
+//           width: '100%',
+//           padding: 0,
+//           display: 'flex',
+//           alignItems: 'center',
+//           justifyContent: 'space-between',
+//           background: '#0F172A',
+//           height: 64,
+//         }}
+//         >
+//         <div style={{
+//           background: '#fff',
+//           height: 64,
+//           display: 'flex',
+//           alignItems: 'center',
+//           padding: '0 16px',
+//           flexShrink: 0,
+//         }}>
+//           <Image
+//             preview={false}
+//             src="/tante-logo.svg"
+//             width={96}          // fixed px — never grows
+//             height={29}         // keeps aspect ratio locked
+//             style={{ display: 'block' }}
+//           />
+//         </div>
+//         <Menu
+//           theme="dark"
+//           mode="horizontal"
+//           defaultSelectedKeys={['2']}
+//           // items={items1}
+//           style={{ flex: 1, minWidth: 0 }}
+//         />
+//       </Header>
+//       <Layout>
+//         <Sider 
+//           breakpoint="lg"
+//           collapsedWidth="0"
+//           style={{
+//             position: 'sticky',
+//             top: 64,
+//             height: 'calc(100vh - 64px)',
+//             overflow: 'auto',
+//           }}
+//           onBreakpoint={(broken) => {
+//             console.log(broken);
+//           }}
+//           onCollapse={(collapsed, type) => {
+//             console.log(collapsed, type);
+//           }}
+//         >
+//           <Menu
+//             mode="inline"
+//             defaultSelectedKeys={['1']}
+//             defaultOpenKeys={['sub1']}
+//             style={{ height: '100%', borderInlineEnd: 0 }}
+//             items={navItems}
+//           />
+//         </Sider>
+//         <Layout style={{ padding: '0 24px 24px' }}>
+//           <Content>
+//             <Outlet />
+//           </Content>
+//         </Layout>
+//       </Layout>
+//     </Layout>
+//   );
+// }
+
+
+import {
+  Typography,
+  Layout,
+  Image,
+  Grid,
+  Drawer,
+  Button,
+  Menu,
+  Avatar} from 'antd';
+
+import {
+  DashboardFilled,
+  DashboardOutlined,
+  FileDoneOutlined,
+  FileFilled,
+  HomeFilled,
+  MenuOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+
+import { Outlet, Link } from 'react-router-dom';
 import { useState } from 'react';
+import Sider from 'antd/es/layout/Sider';
 
-const { Title, Text, Link } = Typography;
-
-const { Header, Footer, Content } = Layout;
+const { Header, Content } = Layout;
 const { useBreakpoint } = Grid;
 
 const navItems = [
-  { key: 'home', label: 'Home', to: '#' },
-  { key: 'properties', label: 'Properties', to: '#' },
-  { key: 'tenants', label: 'Tenants', to: '#' },
-  { key: 'payments', label: 'Payments', to: '#' },
+  { key: 'Home', label: <Link to="/"><Avatar size="small" icon={<DashboardFilled />}/> Dash borad</Link>, to: '/rental-profile' },
+  { key: 'leases', label: <Link to="#"><Avatar size={'small'} icon={<FileFilled />}/> Leases</Link>, to: '/rental-profile/leases' },
 ];
 
 export default function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+
   const screens = useBreakpoint();
-  const isMobile = !screens.md; // <768px = mobile
+
+  // lg = 992px
+  const isMobile = !screens.lg;
+
+  const handleMenuClick = () => {
+    if (isMobile) {
+      setDrawerOpen(false);
+    }
+  };
+
+  const menu = (
+    <Menu
+      mode="inline"
+      defaultSelectedKeys={['home']}
+      style={{
+        height: '100%',
+        borderInlineEnd: 0,
+      }}
+      items={navItems}
+      onClick={handleMenuClick}
+    />
+  );
 
   return (
-    <Layout>
+    <Layout style={{ minHeight: '100vh' }}>
+
+      {/* HEADER */}
       <Header
         style={{
           position: 'sticky',
@@ -35,122 +176,103 @@ export default function AppLayout() {
           height: 64,
         }}
       >
+
         {/* LOGO */}
-        <div style={{
-          background: '#fff',
-          height: 64,
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 16px',
-          flexShrink: 0,
-        }}>
+        <div
+          style={{
+            background: '#fff',
+            height: 64,
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 16px',
+            flexShrink: 0,
+          }}
+        >
           <Image
             preview={false}
             src="/tante-logo.svg"
-            width={96}          // fixed px — never grows
-            height={29}         // keeps aspect ratio locked
+            width={96}
+            height={29}
             style={{ display: 'block' }}
           />
         </div>
 
-        {/* DESKTOP NAV */}
-        {!isMobile && (
-          <nav style={{ display: 'flex', gap: 4, flex: 1, padding: '0 16px' }}>
-            {navItems.map(item => (
-              <Link
-                key={item.key}
-                href={item.to}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: 'rgba(255,255,255,0.6)',
-                  textDecoration: 'none',
-                  transition: 'all .15s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+        {/* MOBILE MENU BUTTON */}
+        {isMobile && (
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setDrawerOpen(true)}
+            style={{
+              color: '#fff',
+              fontSize: 20,
+              marginLeft: 8,
+            }}
+          />
         )}
 
-        {/* DESKTOP CTA BUTTONS */}
-        {/* {!isMobile && (
-          <div style={{ display: 'flex', gap: 8, padding: '0 24px', flexShrink: 0 }}>
-            <Button ghost style={{ fontWeight: 700, fontSize: 13 }}>Log in</Button>
-            <Button
-              type="primary"
-              style={{ background: '#0F766E', borderColor: '#0F766E', fontWeight: 700, fontSize: 13 }}
-            >
-              Get Started
-            </Button>
-          </div>
-        )} */}
-
-        {/* MOBILE HAMBURGER */}
-        {isMobile && (
-          <div style={{ marginLeft: 'auto', paddingRight: 16 }}>
-            <Button
-              type="text"
-              icon={<MenuOutlined style={{ color: '#fff', fontSize: 18 }} />}
-              onClick={() => setDrawerOpen(true)}
-            />
-          </div>
+        {/* DESKTOP HEADER MENU */}
+        {!isMobile && (
+          <Menu
+            theme="dark"
+            mode="horizontal"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              background: 'transparent',
+            }}
+          />
         )}
       </Header>
 
-      {/* MOBILE DRAWER */}
-      <Drawer
-        title={
-          <span style={{ fontWeight: 900, fontSize: 20 }}>
-            <span style={{ color: '#14B8A6' }}>t</span>
-            <span style={{ color: '#0F172A' }}>ante</span>
-          </span>
-        }
-        placement="right"
-        onClose={() => setDrawerOpen(false)}
-        open={drawerOpen}
-        width={280}
-        styles={{ body: { padding: 0 } }}
-      >
-        {navItems.map(item => (
-          <Link
-            key={item.key}
-            href={item.to}
-            onClick={() => setDrawerOpen(false)}
+      <Layout>
+
+        {/* DESKTOP SIDEBAR */}
+        {!isMobile && (
+          <Sider
+            width={240}
             style={{
-              display: 'block',
-              padding: '14px 24px',
-              fontSize: 15,
-              fontWeight: 600,
-              color: '#0F172A',
-              borderBottom: '1px solid #f1f5f9',
-              textDecoration: 'none',
+              position: 'sticky',
+              top: 64,
+              height: 'calc(100vh - 64px)',
+              overflow: 'auto',
             }}
           >
-            {item.label}
-          </Link>
-        ))}
-        {/* <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Button block style={{ fontWeight: 700 }}>Log in</Button>
-          <Button
-            block
-            type="primary"
-            style={{ background: '#0F766E', borderColor: '#0F766E', fontWeight: 700 }}
-          >
-            Get Started Free →
-          </Button>
-        </div> */}
-      </Drawer>
+            {menu}
+          </Sider>
+        )}
 
-      <Content style={{ backgroundColor: '#fff' }}>
-        <Outlet />
-      </Content>
-     
+        {/* MOBILE DRAWER */}
+        <Drawer
+          title="Tante"
+          placement="left"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          width={280}
+          styles={{
+            body: {
+              padding: 0,
+            },
+          }}
+        >
+          {menu}
+        </Drawer>
+
+        {/* CONTENT */}
+        <Layout
+          style={{
+            padding: isMobile
+              ? '0 12px 16px'
+              : '0 24px 24px',
+            minWidth: 0,
+          }}
+        >
+          <Content>
+            <Outlet />
+          </Content>
+        </Layout>
+
+      </Layout>
     </Layout>
   );
 }

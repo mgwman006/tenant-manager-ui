@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { AccountProvider } from "./store/account/AccountContext";
+import { TenantProvider } from "./store/tenant/TenantContext";
 
 const rootElement = document.getElementById("root");
 
@@ -14,7 +15,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <AccountProvider>
-      <App />
+      <TenantProvider>
+        <App />
+      </TenantProvider>
     </AccountProvider>
   </React.StrictMode>
 );

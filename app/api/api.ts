@@ -1,8 +1,9 @@
 import axios from "axios";
 import { ApiResponse } from "../models/common";
 import { ApiError } from "../models/error";
-import { LeaseCreateDTO, LeaseDetailsDTO } from "../models/lease";
-import { TenantDetailsDTO, TenantInvitationCreateDTO, TenantInvitationDetailsDTO } from "../models/user";
+import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO,LeaseInvitationDetailsDTO, LeaseStatus } from "../models/lease";
+import { TenantDetailsDTO } from "../models/user";
+import { PaymentTransactionCreateDTO } from "../models/payments";
 
 const apiUrl = import.meta.env.VITE_RENT_MANAGER_API_URL;
 
@@ -18,6 +19,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response) {
       const { message, data, statusCode } = error.response.data;
+
       return Promise.reject(
         new ApiError({
           message: message ?? "SERVER_ERROR",
@@ -47,9 +49,9 @@ apiClient.interceptors.response.use(
   }
 );
 
-export const tenantInvitationApi = {
+export const invitationApi = {
     getActiveInvitationsByPhoneNumber: async (phoneNumber :string, jwtToken: string) => {
-        const results = await apiClient.get<ApiResponse<TenantInvitationDetailsDTO[]>>(`/tenant-invitations/phone/${phoneNumber}`,
+        const results = await apiClient.get<ApiResponse<LeaseInvitationDetailsDTO[]>>(`/lease-invitations/phone/${phoneNumber}`,
             {
                 headers: {
                 'Authorization': `Bearer ${jwtToken}`
@@ -60,7 +62,7 @@ export const tenantInvitationApi = {
     },
 
   getByInvitationToken: async (invitationToken:string,jwtToken: string) => {
-    const res = await apiClient.get<ApiResponse<TenantInvitationDetailsDTO>>(`/tenant-invitations/${invitationToken}`,
+    const res = await apiClient.get<ApiResponse<LeaseInvitationDetailsDTO>>(`/lease-invitations/${invitationToken}`,
         {
             headers: {
             'Authorization': `Bearer ${jwtToken}`
@@ -71,8 +73,8 @@ export const tenantInvitationApi = {
   },
 
   acceptInvitation: async (invitationToken:string, userId:number, jwtToken: string) => {
-    const res = await apiClient.post<ApiResponse<TenantInvitationDetailsDTO>>(
-      `/tenant-invitations/${invitationToken}/accept?userId=${userId}`,
+    const res = await apiClient.post<ApiResponse<LeaseInvitationDetailsDTO>>(
+      `/lease-invitations/${invitationToken}/tenant/accept?userId=${userId}`,
       null,
       {
         headers: {
@@ -84,7 +86,7 @@ export const tenantInvitationApi = {
   },
 
   getLeaseDetailsByInvitationToken: async (invitationToken:string, jwtToken:string) => {
-    const res = await apiClient.get<ApiResponse<LeaseDetailsDTO>>(`/tenant-invitations/${invitationToken}/lease`,
+    const res = await apiClient.get<ApiResponse<LeaseDetailsDTO>>(`/lease-invitations/${invitationToken}/lease`,
         {
             headers: {
                 'Authorization': `Bearer ${jwtToken}`
@@ -98,6 +100,18 @@ export const tenantInvitationApi = {
 };
 
 export const leaseApi = {
+  getLeasesByTenantAndStatus: async (tenantId: number,status:LeaseStatus, token: string) => {
+    const res = await apiClient.get<ApiResponse<LeaseDetailsDTO[]>>(
+      `/leases/tenant/${tenantId}?status=${status}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    return handleResponse(res.data);
+  },
     getActiveLeasesByTenantId: async (tenantId : number, token :string) => {
         const result = await apiClient.get<ApiResponse<LeaseDetailsDTO[]>>(`/leases/tenant/${tenantId}`,{
             headers: {
@@ -117,7 +131,15 @@ export const leaseApi = {
   },
 
   createLease: async (requestBody: LeaseCreateDTO, token: string) => {
-    const res = await apiClient.post<ApiResponse<LeaseDetailsDTO>>(`/leases`, requestBody, {
+    const res = await apiClient.post<ApiResponse<LeaseDetailsDTO>>(`/leases/tenant`, requestBody, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return handleResponse(res.data);
+  },
+  getRentSummary: async (leaseId: number, token: string) => {
+    const res = await apiClient.get<ApiResponse<RentSummaryDTO>>(`/leases/rent/summary/${leaseId}`,  {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -135,6 +157,24 @@ export const tenantApi = {
         });
         return handleResponse(res.data);
     }
+};
+
+export const paymentApi = {
+
+  recordPayment: async (tenantId:number,requestBody: PaymentTransactionCreateDTO, token: string) => {
+    const res = await apiClient.post<ApiResponse<String>>(
+      `/payment-blocks/tenant/${tenantId}/record-payment`,
+      requestBody,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    return handleResponse(res.data);
+  }
+ 
 };
 
 export function handleResponse<T>(response: ApiResponse<T>): T {
