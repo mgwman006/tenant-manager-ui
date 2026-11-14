@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Button, Card, Empty, List, notification, Spin, Tag, Typography } from "antd";
+import { Alert, Button, Card, Empty, Flex, List, notification, Spin, Tag, Typography } from "antd";
 import { CalendarOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   ViewingBookingDetailsDTO,
@@ -8,7 +8,14 @@ import {
 } from "../../models/viewing";
 import { getViewingBookingsByRequester } from "../../services/viewingService";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
+
+const formatStatus = (status: string) =>
+  status
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
 const statusColor: Record<ViewingBookingStatus, string> = {
   [ViewingBookingStatus.DRAFT]: "default",
@@ -109,7 +116,7 @@ export default function ViewingBookings({ requesterUserId, token }: ViewingBooki
     <div>
       {contextHolder}
       {bookings.length === 0 ? (
-        <Card style={{ borderRadius: 16 }}>
+        <Card style={{ borderRadius: 12, borderColor: "#e6ebf2" }}>
           <Empty description="You haven't requested a viewing yet." />
         </Card>
       ) : (
@@ -119,39 +126,55 @@ export default function ViewingBookings({ requesterUserId, token }: ViewingBooki
           grid={{ gutter: 16, xs: 1, sm: 1, md: 1, lg: 2, xl: 2, xxl: 2 }}
           renderItem={(booking) => (
             <List.Item style={{ height: "100%" }}>
-              <Card style={{ width: "100%", height: "100%", borderRadius: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                  <div>
-                    <Text type="secondary">Viewing request</Text>
-                    <Title level={5} style={{ margin: "4px 0 8px" }}>
-                      {booking.reference || `#${booking.id}`}
-                    </Title>
-                  </div>
-                  <Tag color={statusColor[booking.status]}>{booking.status.replaceAll("_", " ")}</Tag>
-                </div>
+              <Card
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: 12,
+                  borderColor: "#e6ebf2",
+                }}
+                styles={{ body: { padding: 18 } }}
+              >
+                <Flex justify="space-between" align="center" gap={12} wrap>
+                  <Text strong style={{ fontSize: 16 }}>Viewing</Text>
+                  <Tag color={statusColor[booking.status]}>{formatStatus(booking.status)}</Tag>
+                </Flex>
 
-                <div style={{ padding: 14, marginTop: 8, background: "#f7f9fc", borderRadius: 12 }}>
+                <div style={{ padding: 14, marginTop: 16, background: "#f7f9fc", borderRadius: 10 }}>
                   <Text type="secondary"><CalendarOutlined /> Requested time</Text>
-                  <div style={{ marginTop: 6, fontWeight: 600 }}>
+                  <Text strong style={{ display: "block", marginTop: 6 }}>
                     {formatDateTime(booking.startTime)}
-                  </div>
-                  <Text type="secondary">Unit ID: {booking.unitId}</Text>
+                  </Text>
+                  {booking.endTime && (
+                    <Text type="secondary" style={{ display: "block", marginTop: 4 }}>
+                      Until {formatDateTime(booking.endTime)}
+                    </Text>
+                  )}
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
-                  <Text>
-                    Viewing fee: <strong>{formatFee(booking.serviceFee)}</strong>
-                  </Text>
-                  <Tag color={paymentColor[booking.paymentStatus]}>
-                    {booking.paymentStatus.replaceAll("_", " ")}
-                  </Tag>
-                </div>
+                {booking.paymentStatus !== ViewingPaymentStatus.NOT_REQUIRED && (
+                  <Flex
+                    justify="space-between"
+                    align="center"
+                    gap={8}
+                    wrap
+                    style={{ marginTop: 14 }}
+                  >
+                    <div>
+                      <Text type="secondary" style={{ display: "block" }}>Viewing fee</Text>
+                      <Text strong>{formatFee(booking.serviceFee)}</Text>
+                    </div>
+                    <Tag color={paymentColor[booking.paymentStatus]}>
+                      {formatStatus(booking.paymentStatus)}
+                    </Tag>
+                  </Flex>
+                )}
 
                 {booking.outcome?.notes && (
                   <Alert
                     type="info"
                     showIcon
-                    message={booking.outcome.type.replaceAll("_", " ")}
+                    message={formatStatus(booking.outcome.type)}
                     description={booking.outcome.notes}
                     style={{ marginTop: 14, borderRadius: 10 }}
                   />
