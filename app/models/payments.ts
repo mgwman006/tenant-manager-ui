@@ -21,9 +21,9 @@ export interface CreateRentReceivingAccountDTO
 
 export enum PaymentMethod
 {
-  CASH,
-  BANK_TRANSFER,
-  MOBILE_MONEY
+  CASH = "CASH",
+  BANK_TRANSFER = "BANK_TRANSFER",
+  MOBILE_MONEY = "MOBILE_MONEY"
 }
 
 export enum MobileMoneyProvider
