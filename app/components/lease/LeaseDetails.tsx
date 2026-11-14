@@ -63,6 +63,59 @@ const formatRent = (lease: LeaseDetailsDTO) => {
   return `${formatMoney(rent.amount, rent.currency || "TZS")}${frequency}`;
 };
 
+const sanitizeLeaseTerms = (html: string) => {
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  const allowedTags = new Set([
+    "a", "blockquote", "br", "div", "em", "h1", "h2", "h3", "li", "ol",
+    "p", "strong", "u", "ul",
+  ]);
+  const sanitized = document.createElement("div");
+
+  const copySafeNodes = (source: ParentNode, target: ParentNode) => {
+    for (const node of Array.from(source.childNodes)) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        target.appendChild(document.createTextNode(node.textContent ?? ""));
+        continue;
+      }
+
+      if (!(node instanceof HTMLElement)) {
+        continue;
+      }
+
+      const tagName = node.tagName.toLowerCase();
+      if (["script", "style", "iframe", "object", "embed", "svg"].includes(tagName)) {
+        continue;
+      }
+      if (!allowedTags.has(tagName)) {
+        copySafeNodes(node, target);
+        continue;
+      }
+
+      const safeElement = document.createElement(tagName);
+      if (tagName === "a") {
+        const href = node.getAttribute("href");
+        if (href) {
+          try {
+            const url = new URL(href, window.location.origin);
+            if (["http:", "https:", "mailto:"].includes(url.protocol)) {
+              safeElement.setAttribute("href", href);
+              safeElement.setAttribute("target", "_blank");
+              safeElement.setAttribute("rel", "noopener noreferrer");
+            }
+          } catch {
+            // Invalid links are omitted while preserving their text.
+          }
+        }
+      }
+      copySafeNodes(node, safeElement);
+      target.appendChild(safeElement);
+    }
+  };
+
+  copySafeNodes(parsed.body, sanitized);
+  return sanitized.innerHTML;
+};
+
 export default function LeaseDetails() {
   const { leaseId } = useParams();
   const navigate = useNavigate();
@@ -266,6 +319,7 @@ export default function LeaseDetails() {
         <Col xs={24} md={12}>
           <Card title="Lease information" style={{ height: "100%" }}>
             <Descriptions column={1} size="small">
+              <Descriptions.Item label="Unit">{lease.unitId || "Not available"}</Descriptions.Item>
               <Descriptions.Item label="Tenant">{tenantName || "Not available"}</Descriptions.Item>
               <Descriptions.Item label="Phone number">{lease.tenant?.phoneNumber || "Not available"}</Descriptions.Item>
               <Descriptions.Item label="Email">{lease.tenant?.email || "Not available"}</Descriptions.Item>
@@ -282,6 +336,19 @@ export default function LeaseDetails() {
                 {lease.fullLeasePaymentRequired ? "Full lease payment required" : "Installments allowed"}
               </Descriptions.Item>
             </Descriptions>
+          </Card>
+        </Col>
+
+        <Col xs={24}>
+          <Card title="Lease terms and conditions">
+            {lease.leaseTerms?.trim() ? (
+              <div
+                style={{ lineHeight: 1.7, overflowWrap: "anywhere" }}
+                dangerouslySetInnerHTML={{ __html: sanitizeLeaseTerms(lease.leaseTerms) }}
+              />
+            ) : (
+              <Text type="secondary">No lease terms and conditions were provided.</Text>
+            )}
           </Card>
         </Col>
 

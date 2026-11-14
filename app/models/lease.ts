@@ -18,8 +18,15 @@ export enum RentFrequency {
 export enum LeaseStatus {
   ACTIVE = "ACTIVE",
   ENDED = "ENDED",
+  TERMINATED = "TERMINATED",
   PENDING = "PENDING",
-  PENDING_LANDLORD_APPROVAL = "PENDING_LANDLORD_APPROVAL"
+  PENDING_LANDLORD_APPROVAL = "PENDING_LANDLORD_APPROVAL",
+  PENDING_TENANT_APPROVAL = "PENDING_TENANT_APPROVAL",
+}
+
+export enum LeaseInitiator {
+  LANDLORD = "LANDLORD",
+  TENANT = "TENANT",
 }
 
 export enum RentPaymentStatus
@@ -61,10 +68,13 @@ export interface LeaseInvitationDetailsDTO {
 export interface LeaseDetailsDTO {
   referenceNumber: string;
   id: number;
+  unitId: number;
+  initiatedBy: LeaseInitiator;
   startDate: string; // ISO date
   endDate: string; // ISO date
-  rent: RentDTO,
-  fullLeasePaymentRequired:boolean;
+  rent: RentDTO;
+  fullLeasePaymentRequired: boolean;
+  leaseTerms: string | null;
   status: LeaseStatus;
   tenant: TenantDetailsDTO;
   invitations: LeaseInvitationDetailsDTO[];
