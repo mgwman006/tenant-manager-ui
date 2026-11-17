@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, Typography, notification, Avatar, Tabs, Spin, Row, Col, Flex, Modal, Badge } from "antd";
-import { useSearchParams } from "react-router-dom";
 import { useAccount } from "../store/account/AccountContext";
-import { AccountState, TenantDetailsDTO } from "../models/user";
+import { TenantDetailsDTO } from "../models/user";
 import { EyeOutlined, BellOutlined, RightOutlined } from "@ant-design/icons";
 import { LeaseStatus } from "../models/lease";
 import Leases from "./lease/Leases";
@@ -18,8 +17,6 @@ const {Meta} = Card;
 
 
 export default function HomePage() {
-    const [searchParams] = useSearchParams();
-    let accountStateString = searchParams.get("state");
     const [notificationApi, contextHolder] = notification.useNotification();
     const { accountState, dispatchAccountState } = useAccount();
     const [tenant, setTenant] = useState<TenantDetailsDTO|null>(null);
@@ -34,73 +31,51 @@ export default function HomePage() {
 
      
 
-    const loadTenant = async (userId:number, jwtToken:string) =>
-    {
-        setLoading(true);
-        const tenantResponse = await getTenantByUserId(userId, jwtToken, notificationApi);
-        setTenant(tenantResponse);
-        dispatchTenantState({ type: "FETCH_SUCCESS", payload: tenantResponse });
-        setLoading(false);
-    }
-
-    const loadInvitations = async (phoneNumber:string,token : string) =>
-    {
-        const invites = await getActiveInvitations(phoneNumber,token,notificationApi);
-        setInvitesCount(invites.length)
-    }
-
     useEffect(() => {
-        if(!accountStateString){
-            accountStateString = JSON.stringify(accountState);
-        }
-
-        if (!accountStateString) {
-            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
-            return;
-        }
-       
-        const receivedAccountState: AccountState = JSON.parse(accountStateString);
-        const details = receivedAccountState.accountDetails;
-        if (!details) {
-            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
-            return;
-        }
-
-        if (isTokenExpired(details.token)) {
+        let cancelled = false;
+        const details = accountState.accountDetails;
+        if (!details || isTokenExpired(details.token)) {
             notificationApi.error({
-            message: "Session expired",
-            description: "Your sign-in session has expired. Please sign in again.",
+                message: "Sign-in required",
+                description: accountState.error ?? "Your sign-in session has expired. Please sign in again.",
             });
-            dispatchAccountState({ type: "LOGOUT" });
-            navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
-
-            return;
+            if (details) dispatchAccountState({ type: "LOGOUT" });
+            navigateToAuth("tenant-manager", details?.phoneNumber);
+            return () => { cancelled = true; };
         }
 
-        if (!accountState.accountDetails || accountState.accountDetails.token !== details.token) {
-            dispatchAccountState({ type: "FETCH_SUCCESS", payload: details });
-        }
-
-        loadTenant(details.userDetails.id,details.token);
-        
-    }, []);
+        setTenant(null);
+        setLoading(true);
+        getTenantByUserId(details.userDetails.id, details.token, notificationApi).then((tenantResponse) => {
+            if (cancelled) return;
+            setTenant(tenantResponse);
+            dispatchTenantState(tenantResponse
+                ? { type: "FETCH_SUCCESS", payload: tenantResponse }
+                : { type: "LOGOUT" });
+        }).finally(() => {
+            if (!cancelled) setLoading(false);
+        });
+        return () => { cancelled = true; };
+    }, [accountState.accountDetails, accountState.error, dispatchAccountState, dispatchTenantState, notificationApi]);
 
     useEffect(() => {
-    const token = accountState.accountDetails?.token;
-    const phoneNumber = accountState.accountDetails?.userDetails.phoneNumber;
-
-    if (!phoneNumber || !token) {
-        navigateToAuth("tenant-manager",accountState.accountDetails?.phoneNumber);
-        return;
-    }
-
-    loadInvitations(phoneNumber, token);
-}, [tenant?.phoneNumber, accountState.accountDetails?.token]);
+        let cancelled = false;
+        const token = accountState.accountDetails?.token;
+        const phoneNumber = accountState.accountDetails?.userDetails.phoneNumber;
+        if (!phoneNumber || !token || isTokenExpired(token)) {
+            setInvitesCount(0);
+            return () => { cancelled = true; };
+        }
+        getActiveInvitations(phoneNumber, token, notificationApi).then((invites) => {
+            if (!cancelled) setInvitesCount(invites.length);
+        });
+        return () => { cancelled = true; };
+    }, [accountState.accountDetails?.userDetails.phoneNumber, accountState.accountDetails?.token, notificationApi]);
 
     useEffect(() => {
         const requesterUserId = accountState.accountDetails?.id;
         const token = accountState.accountDetails?.token;
-        if (!requesterUserId || !token) {
+        if (!requesterUserId || !token || isTokenExpired(token)) {
             setViewingBookingsCount(0);
             return;
         }
@@ -138,6 +113,7 @@ export default function HomePage() {
     if (loading) {
         return (
             <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {contextHolder}
                 <Spin size="large" tip="Loading your account..." />
             </div>
         );
