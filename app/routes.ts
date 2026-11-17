@@ -1,7 +1,6 @@
 import Home from "./components/Home";
 import HomePage from "./components/HomePage";
 import InvitationDetails from "./components/invitation/InvitationDetails";
-import CreateLease from "./components/lease/CreateLease";
 import LeaseDetails from "./components/lease/LeaseDetails";
 import LeasesDashboard from "./components/lease/LeasesDashboard";
 import LeasesPage from "./components/lease/LeasesPage";
@@ -31,10 +30,6 @@ const routes = [
           {
             path: "rent/:leaseId",
             Component: RentSummary,
-          },
-          {
-            path: "create",
-            Component: CreateLease,
           },
         ]
       },

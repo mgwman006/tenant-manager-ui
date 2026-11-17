@@ -1,18 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Flex, Form, Input, Modal, notification, Progress, Radio, Result, Row, Spin, Table, TableProps, Tag, Typography } from "antd";
-import { leaseApi } from "../../api/api";
+import { Alert, Button, Card, Col, Descriptions, Form, Input, Modal, notification, Progress, Radio, Result, Row, Spin, Table, TableProps, Tag } from "antd";
 import { LeaseDetailsDTO, PaymentBlockStatus, PaymentBlockSummaryDTO, RentSummaryDTO } from "../../models/lease";
 import { useAccount } from "../../store/account/AccountContext";
 import { getRentSummary, getLease } from "../../services/leaseService";
-import { UserOutlined, CalendarOutlined, DollarOutlined, FieldTimeOutlined, EditFilled, PlusCircleOutlined, PlusOutlined, SmileOutlined, HomeTwoTone, BookOutlined, ArrowRightOutlined, TeamOutlined, RightOutlined, BellOutlined, WalletFilled, PayCircleOutlined, ScheduleOutlined, CreditCardOutlined, ArrowLeftOutlined } from "@ant-design/icons";
-import { PaymentTransactionCreateDTO } from "../../models/payments";
+import { CreditCardOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { PaymentMethod, PaymentTransactionCreateDTO } from "../../models/payments";
 import { recordPayment } from "../../services/paymentService";
+import { navigateToAuth } from "../../services/authService";
 
-
-const { Title, Text } = Typography;
-const authUrl = import.meta.env.VITE_AUTH_URL?.trim();
-const tenantManagerUrl = import.meta.env.VITE_TENANT_MANAGER_URL?.trim();
 
 export default function RentSummary() {
   const { leaseId } = useParams();
@@ -26,44 +22,22 @@ export default function RentSummary() {
   const [paymetTransactionForm] = Form.useForm<PaymentTransactionCreateDTO>();
   const [selectedPaymentBlockId,setSelectedPaymentBlockId] = useState<number>(0);
   const [selectedAmount,setSelectedAmount] = useState<number>(0);
-
-  const navigateToAuthFromLeaseDeatils = (nextApp: string = "tenant-manager") => {
-    if (!authUrl) {
-      notificationApi.error({
-        message: "Error while reading url",
-        description: "VITE_AUTH_URL is not configured.",
-      });
-      return;
-    }
-
-    const outGoingUrlValue = nextApp === "tenant-manager" ? `${tenantManagerUrl}/leases/${leaseId}` : null;
-    if (!outGoingUrlValue) {
-      console.error("Unable to resolve outgoing URL for auth redirect.");
-      return;
-    }
-
-    const url = `${authUrl}?outGoingUrl=${encodeURIComponent(outGoingUrlValue)}&phoneNumber=${encodeURIComponent("")}`;
-    window.location.href = url;
-  };
-
-  
-  const loadAcceptedLease = async (jwtToken:string) => {
-    const leaseDetails = await getLease(Number(leaseId), jwtToken, notificationApi);
-    setLease(leaseDetails);
-  }
-
-  const loadRentPaymentOutstanding = async (jwtToken:string) => {
-    const rentPayment = await getRentSummary(Number(leaseId), jwtToken, notificationApi);
-    setRentSummary(rentPayment);
-  }
+  const [paymentSaving, setPaymentSaving] = useState(false);
 
   const openPaymentTransactionModal = (paymentBlockId:number, amount:number) =>{
         setIsPaymentModalOpen(true);
         setSelectedPaymentBlockId(paymentBlockId);
         setSelectedAmount(amount);
+        paymetTransactionForm.setFieldsValue({
+          paymentBlockId,
+          amount,
+          currency: "TZS",
+          payerUserId: accountState.accountDetails?.userDetails.id ?? 0,
+          method: PaymentMethod.CASH,
+        });
   }
 
-  const handleOnFinishPaymentForm = (values:PaymentTransactionCreateDTO) => {
+  const handleOnFinishPaymentForm = async (values:PaymentTransactionCreateDTO) => {
         const tenantId = lease?.tenant?.id;
 
         if(!tenantId){
@@ -73,42 +47,72 @@ export default function RentSummary() {
             });
             return;
         }
-        setLoading(true);
-        recordPayment(values,tenantId,accountState.accountDetails?.token ?? "",notificationApi);
-        setIsPaymentModalOpen(false);
-        setLoading(false);
+          setPaymentSaving(true);
+          try {
+            const result = await recordPayment(
+              values,
+              tenantId,
+              accountState.accountDetails?.token ?? "",
+              notificationApi,
+            );
+            if (result !== null) {
+              setIsPaymentModalOpen(false);
+              const summary = await getRentSummary(
+                Number(leaseId),
+                accountState.accountDetails?.token ?? "",
+                notificationApi,
+              );
+              setRentSummary(summary);
+            }
+          } finally {
+            setPaymentSaving(false);
+          }
     }
   
-  useEffect(() => {
-    const loadLeaseDetails = async () => {
-      const jwtToken = accountState.accountDetails?.token;
-      if (!jwtToken) {
-        notificationApi.error({
-          message: "Jwt token is missing",
-          description: "Please Log in first",
-        });
-        navigateToAuthFromLeaseDeatils();
-        setLoading(false);
-        return;
-      }
+    useEffect(() => {
+      let active = true;
+      const loadLeaseDetails = async () => {
+        const jwtToken = accountState.accountDetails?.token;
+        if (!jwtToken) {
+          const redirected = navigateToAuth("tenant-manager", undefined, `/leases/rent/${leaseId}`);
+          if (!redirected) {
+            notificationApi.error({
+              message: "Sign-in required",
+              description: "Please sign in to view rent and payment details.",
+            });
+            setLoading(false);
+          }
+          return;
+        }
 
-      if (!leaseId) {
-        notificationApi.error({
-          message: "Lease Id Is Invalid",
-          description: "Please login again or contact us for support",
-        });
-        setLoading(false);
-        return;
-      }
+        if (!leaseId || !Number.isInteger(Number(leaseId)) || Number(leaseId) <= 0) {
+          notificationApi.error({
+            message: "Invalid lease link",
+            description: "The lease ID in this address is not valid.",
+          });
+          if (active) {
+            setLoading(false);
+          }
+          return;
+        }
 
-      
-      loadAcceptedLease(jwtToken);
-      loadRentPaymentOutstanding(jwtToken);
-      setLoading(false);
-    };
+        setLoading(true);
+        const [leaseDetails, rentPayment] = await Promise.all([
+          getLease(Number(leaseId), jwtToken, notificationApi),
+          getRentSummary(Number(leaseId), jwtToken, notificationApi),
+        ]);
+        if (active) {
+          setLease(leaseDetails);
+          setRentSummary(rentPayment);
+          setLoading(false);
+        }
+      };
 
-    void loadLeaseDetails();
-  }, []);
+      void loadLeaseDetails();
+      return () => {
+        active = false;
+      };
+    }, [accountState.accountDetails?.token, leaseId]);
 
   if (loading) {
     return (
@@ -123,7 +127,17 @@ export default function RentSummary() {
 
   if(!rentSummary)
   {
-    return <div>{contextHolder}error</div>;
+    return (
+      <div style={{ maxWidth: 900, margin: "24px auto" }}>
+        {contextHolder}
+        <Result
+          status="warning"
+          title="Payment details are unavailable"
+          subTitle="We couldn't load the payment schedule for this lease."
+          extra={<Button onClick={() => navigate(`/leases/${leaseId}`)}>View lease details</Button>}
+        />
+      </div>
+    );
   }
 
   const fullyPaid = rentSummary?.totalOutstandingAmount <= 0;
@@ -140,6 +154,11 @@ export default function RentSummary() {
         title: "End Date",
         dataIndex: "endDate",
         key: "endDate",
+    },
+    {
+        title: "Due Date",
+        dataIndex: "dueDate",
+        key: "dueDate",
     },
     {
         title: "Amount (TZS)",
@@ -175,19 +194,23 @@ export default function RentSummary() {
     {
         title: "Action",
         render: (_, record) => (
-            <Button onClick={() => openPaymentTransactionModal(record.id,record.amount)} color="primary" variant="solid" disabled={record.status === PaymentBlockStatus.PAID}> <CreditCardOutlined/> Record Payment</Button>
+            <Button onClick={() => openPaymentTransactionModal(record.id,record.outstandingAmount)} color="primary" variant="solid" disabled={record.status === PaymentBlockStatus.PAID || record.outstandingAmount <= 0}> <CreditCardOutlined/> Record Payment</Button>
         ),
     },
 ];
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", padding: 24 }}>
+    <div style={{ minHeight: "100vh", background: "#f8fafc", padding: "clamp(12px, 3vw, 24px)" }}>
       {contextHolder}
-      <Button color="geekblue" onClick={() => navigate(-1)}><ArrowLeftOutlined/> Back</Button>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+        <Button color="geekblue" onClick={() => navigate(`/leases/${leaseId}`)}>
+          <ArrowLeftOutlined /> Lease details
+        </Button>
+      </div>
 
 
       <Row>
         <Col span={24}>
-          <Card title="Rent Summary" style={{ width:"100%" }}>
+          <Card title={`Rent & payment${lease?.referenceNumber ? ` · ${lease.referenceNumber}` : ""}`} style={{ width:"100%", borderRadius: 16 }}>
               <Descriptions
                 size="small"
                 column={1}
@@ -195,13 +218,13 @@ export default function RentSummary() {
               >
               
                 <Descriptions.Item label="Total Rent Amount (TZS)">
-                  {rentSummary.totalExpectedAmount}
+                  {new Intl.NumberFormat("en-TZ").format(rentSummary.totalExpectedAmount)}
                 </Descriptions.Item>
                 <Descriptions.Item label="Amount Paid (TZS)">
-                  {rentSummary.totalPaidAmount}
+                  {new Intl.NumberFormat("en-TZ").format(rentSummary.totalPaidAmount)}
                 </Descriptions.Item>
                 <Descriptions.Item label="Outstanding Amount (TZS)">
-                  {rentSummary.totalOutstandingAmount}
+                  {new Intl.NumberFormat("en-TZ").format(rentSummary.totalOutstandingAmount)}
                 </Descriptions.Item>
               
               </Descriptions>
@@ -220,20 +243,13 @@ export default function RentSummary() {
       </Row>
 
       {
-        rentSummary.paymentBlocks.length==0 ? (
+        rentSummary.paymentBlocks.length === 0 ? (
           <Alert
             title="No payment blocks allocated for this lease"
             type={"error"}
             showIcon
             style={{ marginBottom: 24, whiteSpace: "normal" }}
           />
-        ):
-        fullyPaid ? (
-           <Result
-              status="success"
-              title="You are sorted"
-              subTitle="There is not pending payment"
-            />
         )
         : (
           <Row>
@@ -250,6 +266,15 @@ export default function RentSummary() {
                     showIcon
                     style={{ marginBottom: 24, whiteSpace: "normal" }}
                   />
+
+                  {fullyPaid && (
+                    <Alert
+                      title="All rent payments are up to date"
+                      type="success"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+                  )}
 
                   <div style={{ overflowX: "auto", width: "100%", marginTop: 16 }}>
                         <Table<PaymentBlockSummaryDTO>
@@ -282,7 +307,7 @@ export default function RentSummary() {
                                 form={paymetTransactionForm}
                                 initialValues={{ 
                                     paymentBlockId: selectedPaymentBlockId,
-                                    method:"CASH",
+                                    method: PaymentMethod.CASH,
                                     currency:"TZS",
                                     payerUserId:0,
                                     amount:selectedAmount
@@ -321,9 +346,9 @@ export default function RentSummary() {
                                     rules={[{ required: true }]}
                                     label="Patment Method" name="method" >
                                     <Radio.Group buttonStyle="solid" >
-                                    <Radio.Button value="CASH">Cash</Radio.Button>
-                                    <Radio.Button value="BANK_TRANSFER">Bank Transfer</Radio.Button>
-                                    <Radio.Button value="MOBILE_MONEY">Mobile Money</Radio.Button>
+                                    <Radio.Button value={PaymentMethod.CASH}>Cash</Radio.Button>
+                                    <Radio.Button value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</Radio.Button>
+                                    <Radio.Button value={PaymentMethod.MOBILE_MONEY}>Mobile Money</Radio.Button>
                                     </Radio.Group>
                                 </Form.Item>
 
@@ -340,7 +365,7 @@ export default function RentSummary() {
 
                                 
                                 <Form.Item>
-                                    <Button variant="solid" block type="primary" htmlType="submit" color="green" loading={loading}>Submit</Button>
+                                    <Button variant="solid" block type="primary" htmlType="submit" color="green" loading={paymentSaving}>Submit</Button>
                                 </Form.Item>
                             </Form>
                         </Modal>

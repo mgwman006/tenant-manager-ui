@@ -1,15 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Card, Descriptions, notification, Result, Spin, Tag, Typography } from "antd";
+import { Button, Card, Descriptions, notification, Result, Spin, Tag } from "antd";
 import { leaseApi, invitationApi } from "../../api/api";
-import { AccountState } from "../../models/user";
 import { useAccount } from "../../store/account/AccountContext";
 import { LeaseDetailsDTO, LeaseInvitationDetailsDTO } from "../../models/lease";
-
-const { Title, Text } = Typography;
-
-const authUrl = import.meta.env.VITE_AUTH_URL?.trim();
-const tenantManagerUrl = import.meta.env.VITE_TENANT_MANAGER_URL?.trim();
+import { isTokenExpired, navigateToAuth } from "../../services/authService";
 
 export default function InvitationDetails() {
   const { invitationToken } = useParams();
@@ -22,47 +17,19 @@ export default function InvitationDetails() {
   const { accountState, dispatchAccountState } = useAccount();
   const jwtToken = accountState.accountDetails?.token;
   
-function isTokenExpired(token?: string): boolean 
-    {
-        if (!token) 
-        {
-            return true;
+  const navigateToAuthFromInvitation = (nextApp: string = "tenant-manager", phone?: string): boolean => {
+        const redirected = navigateToAuth(
+          nextApp,
+          phone,
+          invitationToken ? `/invitations/${invitationToken}` : undefined,
+        );
+        if (!redirected) {
+          notificationApi.error({
+            message: "Sign-in required",
+            description: "Please sign in to view this invitation.",
+          });
         }
-
-        try {
-            const parts = token.split(".");
-            if (parts.length < 2) {return true;}
-
-            const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-            const exp = payload?.exp;
-
-            if (typeof exp !== "number") {
-                return true;
-            }
-
-            return Date.now() >= exp * 1000;
-        } catch (error) {
-            return true;
-        }
-    }
-
-  const navigateToAuthFromInvitation = (nextApp: string = "tenant-manager", phone?: string) => {
-        if (!authUrl) {
-            notificationApi.error({
-            message: "Error while reading url",
-            description: "VITE_AUTH_URL is not configured.",
-            });
-            return;
-        }
-
-        const outGoingUrlValue = nextApp === "tenant-manager" ? `tenantManagerUrl/invitation/${invitationToken}`: null;
-        if (!outGoingUrlValue) {
-            console.error("Unable to resolve outgoing URL for auth redirect.");
-            return;
-        }
-
-        const url = `${authUrl}?outGoingUrl=${encodeURIComponent(outGoingUrlValue)}&phoneNumber=${encodeURIComponent("")}`;
-        window.location.href = url;
+        return redirected;
   };
 
 
@@ -78,9 +45,9 @@ function isTokenExpired(token?: string): boolean
       return;
     }
 
-    if(!jwtToken)
-    {
+    if(!jwtToken) {
       navigateToAuthFromInvitation();
+      setLoading(false);
       return;
     }
 
@@ -108,10 +75,11 @@ function isTokenExpired(token?: string): boolean
   };
 
   useEffect(() => {
-    const receivedAccountState: AccountState = accountState;
-    const details = receivedAccountState.accountDetails;
+    const details = accountState.accountDetails;
     if (!details) {
-        console.error("Account state payload is missing accountDetails");
+        if (!navigateToAuthFromInvitation()) {
+          setLoading(false);
+        }
         return;
     }
     if (isTokenExpired(details.token)) {
@@ -120,7 +88,9 @@ function isTokenExpired(token?: string): boolean
         description: "Your sign-in session has expired. Please sign in again.",
         });
         dispatchAccountState({ type: "LOGOUT" });
-        navigateToAuthFromInvitation();
+        if (!navigateToAuthFromInvitation()) {
+          setLoading(false);
+        }
         return;
     }
 
@@ -150,6 +120,7 @@ function isTokenExpired(token?: string): boolean
       return;
     }
 
+    const acceptedLeaseId = invitation?.leaseId;
     setAccepting(true);
     try {
       await invitationApi.acceptInvitation(invitationToken, userId, jwtToken);
@@ -157,7 +128,7 @@ function isTokenExpired(token?: string): boolean
         message: "Invitation accepted",
         description: "Your lease details are now available.",
       });
-      navigate(`/`);
+      navigate(acceptedLeaseId ? `/leases/${acceptedLeaseId}` : `/`);
     } catch (error: any) {
       notificationApi.error({
         message: error?.message ?? "Failed to accept invitation",

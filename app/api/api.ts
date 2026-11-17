@@ -4,6 +4,7 @@ import { ApiError } from "../models/error";
 import { LeaseCreateDTO, LeaseDetailsDTO, RentSummaryDTO,LeaseInvitationDetailsDTO, LeaseStatus } from "../models/lease";
 import { TenantDetailsDTO } from "../models/user";
 import { PaymentTransactionCreateDTO } from "../models/payments";
+import { ViewingBookingDetailsDTO } from "../models/viewing";
 
 const apiUrl = import.meta.env.VITE_RENT_MANAGER_API_URL;
 
@@ -102,8 +103,9 @@ export const invitationApi = {
 export const leaseApi = {
   getLeasesByTenantAndStatus: async (tenantId: number,status:LeaseStatus, token: string) => {
     const res = await apiClient.get<ApiResponse<LeaseDetailsDTO[]>>(
-      `/leases/tenant/${tenantId}?status=${status}`,
+      `/leases/tenant/${tenantId}`,
       {
+        params: { status },
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -144,6 +146,20 @@ export const leaseApi = {
         Authorization: `Bearer ${token}`,
       },
     });
+    return handleResponse(res.data);
+  },
+};
+
+export const viewingApi = {
+  getBookingsByRequester: async (requesterUserId: number, token: string) => {
+    const res = await apiClient.get<ApiResponse<ViewingBookingDetailsDTO[]>>(
+      `/viewings/bookings/by-requester/${requesterUserId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return handleResponse(res.data);
   },
 };
